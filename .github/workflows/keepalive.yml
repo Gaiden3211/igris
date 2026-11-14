@@ -1,0 +1,14 @@
+name: Keep alive
+# Wakes the free Render instance from outside. The app also pings itself, but it cannot wake itself once asleep.
+# Set the repository variable APP_URL (Settings -> Secrets and variables -> Actions -> Variables).
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        if: ${{ vars.APP_URL != '' }}
+        run: curl --fail --silent --show-error --max-time 90 --retry 2 "${{ vars.APP_URL }}/api/health"

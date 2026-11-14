@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: igris
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: RADIUM_API_KEY
+        sync: false
+      - key: RADIUM_API_KEY_BACKUP
+        sync: false
+      - key: RADIUM_BASE_URL
+        value: https://api.radium.cloud/v1
+      - key: RADIUM_MODEL
+        value: tycho-1.0
+      - key: IP_HASH_SALT
+        generateValue: true

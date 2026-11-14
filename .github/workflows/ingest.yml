@@ -1,0 +1,25 @@
+name: Import data
+# Runs the PSI + NTRS import into Supabase. Start it by hand from the Actions tab.
+# Needs repository secrets SUPABASE_URL and SUPABASE_SECRET_KEY.
+on:
+  workflow_dispatch:
+    inputs:
+      dry:
+        description: 'Dry run (print only, do not write)'
+        type: boolean
+        default: false
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsx scripts/ingest.ts ${{ inputs.dry && '--dry' || '' }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}

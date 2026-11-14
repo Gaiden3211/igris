@@ -1,0 +1,39 @@
+{
+  "name": "igris",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "ingest": "tsx scripts/ingest.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@astryxdesign/charts": "^0.7.16-canary.g48a3d9d",
+    "@astryxdesign/core": "^0.7.16-canary.g48a3d9d",
+    "@astryxdesign/theme-neutral": "^0.7.16-canary.g48a3d9d",
+    "@heroicons/react": "^2.2.0",
+    "@stylexjs/stylex": "^0.19.2",
+    "@supabase/supabase-js": "^2.119.0",
+    "next": "16.4.6",
+    "openai": "^7.57.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astryxdesign/cli": "^0.7.16-canary.g48a3d9d",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

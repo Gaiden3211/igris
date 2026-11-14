@@ -1,0 +1,55 @@
+@import '@astryxdesign/core/reset.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+@import '@astryxdesign/charts/charts.css';
+
+html, body { height: 100%; }
+
+/* Background glow. "mono" follows the theme: dark glow on the light theme, light glow on the dark theme. */
+:root { --igris-glow: color-mix(in srgb, var(--color-text-primary) 16%, transparent); }
+:root[data-glow='amber']  { --igris-glow: rgb(245 176 37 / 0.30); }
+:root[data-glow='blue']   { --igris-glow: rgb(56 132 255 / 0.28); }
+:root[data-glow='violet'] { --igris-glow: rgb(139 92 246 / 0.28); }
+:root[data-glow='green']  { --igris-glow: rgb(34 197 124 / 0.26); }
+:root[data-glow='off']    { --igris-glow: transparent; }
+
+.igris-page { position: relative; min-height: 100%; isolation: isolate; }
+.igris-page::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 420px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60% 100% at 50% 0%, var(--igris-glow), transparent 70%);
+  transition: background 300ms ease;
+}
+@media (prefers-reduced-motion: reduce) { .igris-page::before { transition: none; } }
+
+.igris-content { max-width: 1120px; margin-inline: auto; padding: var(--spacing-6) var(--spacing-4) var(--spacing-10); }
+.igris-chat { height: 100%; display: flex; flex-direction: column; }
+.igris-landing { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 720px; width: 100%; margin-inline: auto; padding: var(--spacing-4); gap: var(--spacing-6); }
+.igris-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--spacing-3); }
+.igris-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--spacing-3); }
+.igris-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); align-items: end; }
+.igris-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* Selection bar in the Catalog: stays in view at the bottom while scrolling the table. */
+.igris-compare-bar {
+  position: sticky;
+  bottom: var(--spacing-3);
+  z-index: 2;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-3, 12px);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  background: var(--color-background-popover);
+  padding: var(--spacing-3) var(--spacing-4);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+}
+/* Comparison facts: wide tables scroll sideways inside their card instead of the page. */
+.igris-scroll-x { overflow-x: auto; }
