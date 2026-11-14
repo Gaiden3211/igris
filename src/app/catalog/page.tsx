@@ -116,8 +116,8 @@ export default function CatalogPage() {
       return next;
     });
 
-  const facetOptions = (items: Facet[] | undefined, label?: (v: string) => string) => [
-    {value: 'any', label: t.any},
+  const facetOptions = (items: Facet[] | undefined, anyLabel: string, label?: (v: string) => string) => [
+    {value: 'any', label: anyLabel},
     ...(items ?? []).map(f => ({value: f.value, label: `${label ? label(f.value) : f.value} (${f.count})`})),
   ];
   const dataLabel = (v: string) => (v === 'files' ? t.dataFiles : v === 'tables' ? t.dataTables : t.dataNone);
@@ -161,9 +161,9 @@ export default function CatalogPage() {
           </HStack>
 
           <div className="igris-filters">
-            <Selector label={t.filterSub} options={facetOptions(res.data?.facets.sub)} value={sub || 'any'} onChange={pick(setSub)} />
-            <Selector label={t.filterHardware} options={facetOptions(res.data?.facets.hardware)} value={hardware || 'any'} onChange={pick(setHardware)} />
-            <Selector label={t.filterData} options={facetOptions(res.data?.facets.data, dataLabel)} value={data || 'any'} onChange={pick(setData)} />
+            <Selector label={t.filterSub} options={facetOptions(res.data?.facets.sub, t.anyTopic)} value={sub || 'any'} onChange={pick(setSub)} />
+            <Selector label={t.filterHardware} options={facetOptions(res.data?.facets.hardware, t.anyHardware)} value={hardware || 'any'} onChange={pick(setHardware)} />
+            <Selector label={t.filterData} options={facetOptions(res.data?.facets.data, t.anyData, dataLabel)} value={data || 'any'} onChange={pick(setData)} />
             <Selector
               label={t.sort}
               options={[
