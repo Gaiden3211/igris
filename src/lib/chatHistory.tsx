@@ -1,6 +1,6 @@
 'use client';
 
-import {createContext, useCallback, useContext, useEffect, useState, type ReactNode} from 'react';
+import {createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode} from 'react';
 import {z} from 'zod';
 import type {ChatFocus} from './chatSeed';
 import type {ChatMsg} from './useChat';
@@ -8,6 +8,7 @@ import type {ChatMsg} from './useChat';
 const STORAGE_KEY = 'igris-chats-v1';
 const MAX_CHATS = 50;
 const MAX_MESSAGES = 80;
+const MAX_STORAGE_CHARS = 1_500_000;
 
 export interface Conversation {
   id: string;
@@ -45,17 +46,26 @@ const conversation = z.object({
   messages: z.array(message).max(MAX_MESSAGES),
 });
 
-function readHistory(): Conversation[] {
+function readHistory(): Conversation[] | null {
   try {
-    const saved: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]');
+    const raw = localStorage.getItem(STORAGE_KEY) ?? '[]';
+    if (raw.length > MAX_STORAGE_CHARS) return [];
+    const saved: unknown = JSON.parse(raw);
     if (!Array.isArray(saved)) return [];
     return saved.slice(0, MAX_CHATS).flatMap(item => {
       const result = conversation.safeParse(item);
       return result.success && result.data.messages.length ? [result.data] : [];
     });
   } catch {
-    return [];
+    return null;
   }
+}
+
+function recentMessages(messages: ChatMsg[]) {
+  const turns = messages.filter(message => message.content || message.error);
+  if (turns.length <= MAX_MESSAGES) return turns;
+  // Keep the first question as the title when a long conversation is trimmed.
+  return [turns[0], ...turns.slice(-(MAX_MESSAGES - 1))];
 }
 
 export function conversationTitle({messages}: Conversation) {
@@ -73,9 +83,17 @@ export const useChatHistory = () => useContext(ChatHistoryContext);
 export function ChatHistoryProvider({children}: {children: ReactNode}) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [ready, setReady] = useState(false);
+  const latest = useRef<Conversation[]>([]);
+  const memoryOnly = useRef(false);
 
   useEffect(() => {
-    const load = () => setConversations(readHistory());
+    const load = () => {
+      if (memoryOnly.current) return;
+      const saved = readHistory();
+      if (!saved) return;
+      latest.current = saved;
+      setConversations(saved);
+    };
     load();
     setReady(true);
     const onStorage = (event: StorageEvent) => {
@@ -88,13 +106,26 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
   const save = useCallback((chat: Conversation) => {
     const validated = conversation.safeParse({
       ...chat,
-      messages: chat.messages.filter(m => m.content || m.error).slice(-MAX_MESSAGES),
+      messages: recentMessages(chat.messages),
     });
     if (!validated.success || !validated.data.messages.length) return;
-    const current = readHistory();
+    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
     if (JSON.stringify(current[0]) === JSON.stringify(validated.data)) return;
     const updated = [validated.data, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); } catch {}
+    if (!memoryOnly.current) {
+      let stored = JSON.stringify(updated);
+      while (stored.length > MAX_STORAGE_CHARS && updated.length > 1) {
+        updated.pop();
+        stored = JSON.stringify(updated);
+      }
+      try {
+        if (stored.length > MAX_STORAGE_CHARS) memoryOnly.current = true;
+        else localStorage.setItem(STORAGE_KEY, stored);
+      } catch {
+        memoryOnly.current = true;
+      }
+    }
+    latest.current = updated;
     setConversations(updated);
   }, []);
 

@@ -9,7 +9,7 @@ html, body { height: 100%; }
 
 .igris-content { max-width: 1120px; margin-inline: auto; padding: var(--spacing-6) var(--spacing-4) var(--spacing-10); }
 .igris-chat { height: 100%; display: flex; flex-direction: column; }
-.igris-landing { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 720px; width: 100%; margin-inline: auto; padding: var(--spacing-4); gap: var(--spacing-6); }
+.igris-landing { flex: 1; display: flex; flex-direction: column; justify-content: safe center; max-width: 720px; width: 100%; margin-inline: auto; padding: var(--spacing-4); gap: var(--spacing-6); }
 .igris-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); gap: var(--spacing-3); }
 .igris-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: var(--spacing-3); align-items: end; }
 .igris-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -32,6 +32,7 @@ html, body { height: 100%; }
 }
 /* Comparison facts: wide tables scroll sideways inside their card instead of the page. */
 .igris-scroll-x { min-width: 0; max-width: 100%; overflow-x: auto; }
+.igris-scroll-x > * { min-width: 680px; }
 
 .igris-shell {
   --igris-bg: light-dark(#fff, #212121);
