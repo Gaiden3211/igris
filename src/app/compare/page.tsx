@@ -201,7 +201,7 @@ export default function ComparePage() {
         <VStack gap={5}>
           <VStack gap={2}>
             <Link href="/catalog">← {t.back}</Link>
-            <PageHeader title={t.compareTitle} subtitle={t.compareSubtitle} />
+            <PageHeader title={t.compareTitle} />
           </VStack>
 
           <Card>
@@ -212,7 +212,7 @@ export default function ComparePage() {
               ) : !invs ? (
                 <HStack hAlign="center"><Spinner /></HStack>
               ) : (
-                <div className="igris-scroll-x">
+                <div className="igris-scroll-x" role="region" aria-label={t.compareFacts} tabIndex={0}>
                   <Table<FactRow> data={facts} columns={columns} idKey="key" density="balanced" verticalAlign="top" />
                 </div>
               )}
@@ -248,7 +248,6 @@ export default function ComparePage() {
                 </HStack>
               )}
               {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} />}
-              <Text type="supporting" color="secondary">{t.compareCostNote}</Text>
             </VStack>
           </Card>
 

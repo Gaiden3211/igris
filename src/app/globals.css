@@ -10,9 +10,8 @@ html, body { height: 100%; }
 .igris-content { max-width: 1120px; margin-inline: auto; padding: var(--spacing-6) var(--spacing-4) var(--spacing-10); }
 .igris-chat { height: 100%; display: flex; flex-direction: column; }
 .igris-landing { flex: 1; display: flex; flex-direction: column; justify-content: center; max-width: 720px; width: 100%; margin-inline: auto; padding: var(--spacing-4); gap: var(--spacing-6); }
-.igris-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--spacing-3); }
-.igris-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: var(--spacing-3); }
-.igris-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-3); align-items: end; }
+.igris-grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); gap: var(--spacing-3); }
+.igris-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: var(--spacing-3); align-items: end; }
 .igris-prose { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 /* Selection bar in the Catalog: stays in view at the bottom while scrolling the table. */
@@ -32,7 +31,7 @@ html, body { height: 100%; }
   gap: var(--spacing-3);
 }
 /* Comparison facts: wide tables scroll sideways inside their card instead of the page. */
-.igris-scroll-x { overflow-x: auto; }
+.igris-scroll-x { min-width: 0; max-width: 100%; overflow-x: auto; }
 
 .igris-shell {
   --igris-bg: light-dark(#fff, #212121);
@@ -108,3 +107,19 @@ html, body { height: 100%; }
 .igris-sources summary span, .igris-sources li > span { color: var(--color-text-secondary); }
 .igris-sources ul { display: grid; gap: 6px; margin-top: 8px; }
 .igris-sources li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }
+
+.igris-chart-categories { display: grid; gap: 12px; }
+.igris-chart-categories li { display: grid; grid-template-columns: minmax(0, 1fr) minmax(50px, 1.25fr) 3ch; gap: 12px; align-items: center; }
+.igris-chart-categories li a { overflow-wrap: anywhere; }
+.igris-chart-count { text-align: end; font-variant-numeric: tabular-nums; }
+.igris-chart-bar { display: block; height: 8px; background: var(--igris-hover); border-radius: 6px; }
+.igris-chart-bar > span { display: block; height: 100%; background: var(--color-text-primary); border-radius: inherit; opacity: .75; }
+.igris-scenarios dl { display: grid; gap: 12px; margin-top: 12px; }
+.igris-scenarios dt { font-weight: 600; }
+.igris-scenarios dd { color: var(--color-text-secondary); margin: 4px 0 0; }
+
+@media (max-width: 560px) {
+  .igris-compare-bar { bottom: 4px; }
+  .igris-compare-actions { width: 100%; justify-content: flex-end; }
+  .igris-chart-categories li { grid-template-columns: minmax(0, 1.5fr) minmax(40px, 1fr) 3ch; gap: 8px; }
+}

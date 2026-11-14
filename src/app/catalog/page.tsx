@@ -148,10 +148,10 @@ export default function CatalogPage() {
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <PageHeader title={t.catalogTitle} subtitle={t.catalogSubtitle} />
+          <PageHeader title={t.catalogTitle} />
 
           <HStack gap={2} vAlign="end">
-            <div style={{flex: 1}}>
+            <div style={{flex: 1, minWidth: 0}}>
               <TextInput
                 type="search"
                 label={t.search}
@@ -184,12 +184,8 @@ export default function CatalogPage() {
             />
           </div>
 
-          <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-            <Text color="secondary">
-              {res.data ? t.results(res.data.total) : ' '}
-              {res.data && res.data.total > 1 && selected.size === 0 ? ` · ${t.compareHint(COMPARE_MAX)}` : ''}
-            </Text>
-            {hasFilters && (
+          {hasFilters && (
+            <HStack hAlign="end">
               <Button
                 label={t.clearFilters}
                 variant="ghost"
@@ -202,8 +198,8 @@ export default function CatalogPage() {
                   setData('');
                 }}
               />
-            )}
-          </HStack>
+            </HStack>
+          )}
 
           {res.loading && !res.data ? (
             <HStack hAlign="center"><Spinner /></HStack>
@@ -216,15 +212,17 @@ export default function CatalogPage() {
               <EmptyState title={t.emptyDbTitle} description={t.emptyDbBody} />
             )
           ) : (
-            <Table<InvestigationRow>
-              data={rows}
-              columns={columns}
-              idKey="id"
-              density="balanced"
-              hasHover
-              verticalAlign="top"
-              plugins={{selection: selectionPlugin}}
-            />
+            <div className="igris-scroll-x" role="region" aria-label={t.catalogTitle} tabIndex={0}>
+              <Table<InvestigationRow>
+                data={rows}
+                columns={columns}
+                idKey="id"
+                density="balanced"
+                hasHover
+                verticalAlign="top"
+                plugins={{selection: selectionPlugin}}
+              />
+            </div>
           )}
 
           {selected.size > 0 && (
@@ -235,7 +233,7 @@ export default function CatalogPage() {
                   <Token key={id} label={labels[id] ?? id} size="sm" onRemove={() => unselect(id)} />
                 ))}
               </HStack>
-              <HStack gap={2} vAlign="center">
+              <HStack className="igris-compare-actions" gap={2} vAlign="center" wrap="wrap">
                 <Button label={t.clearSelection} variant="ghost" size="sm" onClick={() => setSelected(new Set())} />
                 <Button
                   label={t.compare}
