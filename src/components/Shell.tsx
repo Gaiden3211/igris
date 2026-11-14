@@ -45,6 +45,8 @@ export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
   const router = useRouter();
   const {conversations} = useChatHistory();
+  const chats = conversations.filter(chat => !chat.comparison);
+  const comparisons = conversations.filter(chat => chat.comparison);
   const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
   const drawer = useRef<HTMLDialogElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
@@ -101,22 +103,25 @@ export function Shell({children}: {children: ReactNode}) {
         ))}
       </nav>
       <div className="igris-sidebar-chats">
-        {conversations.length > 0 && (
-          <nav aria-label={t.chatHistory}>
-            <h2>{t.chatHistory}</h2>
+        {([
+          {title: t.chatHistory, items: chats},
+          {title: t.comparisonHistory, items: comparisons},
+        ]).map(({title, items}) => items.length > 0 && (
+          <nav key={title} aria-label={title}>
+            <h2>{title}</h2>
             <div className="igris-history-list">
-              {conversations.map(chat => {
-              const title = conversationTitle(chat) || t.navChat;
-              return (
-                <Link key={chat.id} href={`/?chat=${chat.id}`} className="igris-nav-link" title={title} prefetch={false}
-                  onClick={() => drawer.current?.close()}>
-                  <span>{title}</span>
-                </Link>
-              );
+              {items.map(chat => {
+                const label = conversationTitle(chat) || t.navChat;
+                return (
+                  <Link key={chat.id} href={`/?chat=${encodeURIComponent(chat.id)}`} className="igris-nav-link" title={label} prefetch={false}
+                    onClick={() => drawer.current?.close()}>
+                    <span>{label}</span>
+                  </Link>
+                );
               })}
             </div>
           </nav>
-        )}
+        ))}
       </div>
       <div className="igris-sidebar-footer">
         <span>{t.anonymous}</span>

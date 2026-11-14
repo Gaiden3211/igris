@@ -3,6 +3,7 @@
 import {createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode} from 'react';
 import {z} from 'zod';
 import type {ChatFocus} from './chatSeed';
+import {COMPARE_MAX, comparisonKey} from './compare';
 import type {ChatMsg} from './useChat';
 
 const STORAGE_KEY = 'igris-chats-v1';
@@ -14,6 +15,7 @@ export interface Conversation {
   id: string;
   focus: ChatFocus | null;
   messages: ChatMsg[];
+  comparison?: {ids: string[]; names: string[]; summary: ChatMsg | null};
 }
 
 const card = z.object({
@@ -39,10 +41,19 @@ const message = z.object({
   error: z.string().optional(),
 }).transform(turn => ({...turn, steps: [] as ChatMsg['steps']}));
 const conversation = z.object({
-  id: z.uuid(),
+  id: z.union([z.uuid(), z.string().regex(/^comparison:PSI-\d{1,6}(,PSI-\d{1,6}){1,3}$/)]),
   focus: z.object({ids: z.array(z.string().regex(/^PSI-\d+$/)).max(4), names: z.array(z.string()).max(4)}).nullable(),
   messages: z.array(message).max(MAX_MESSAGES),
-});
+  comparison: z.object({
+    ids: z.array(z.string().regex(/^PSI-\d{1,6}$/)).min(2).max(COMPARE_MAX),
+    names: z.array(z.string()).min(2).max(COMPARE_MAX),
+    summary: message.nullable(),
+  }).optional(),
+}).refine(chat => chat.comparison
+  ? chat.id === comparisonKey(chat.comparison.ids) && new Set(chat.comparison.ids).size === chat.comparison.ids.length
+    && chat.comparison.names.length === chat.comparison.ids.length
+    && (!chat.comparison.summary || (chat.comparison.summary.role === 'assistant' && Boolean(chat.comparison.summary.content.trim())))
+  : !chat.id.startsWith('comparison:'));
 
 function readHistory(): Conversation[] | null {
   try {
@@ -52,7 +63,7 @@ function readHistory(): Conversation[] | null {
     if (!Array.isArray(saved)) return [];
     return saved.slice(0, MAX_CHATS).flatMap(item => {
       const result = conversation.safeParse(item);
-      return result.success && result.data.messages.length ? [result.data] : [];
+      return result.success && (result.data.messages.length || result.data.comparison) ? [result.data] : [];
     });
   } catch {
     return null;
@@ -66,14 +77,16 @@ function recentMessages(messages: ChatMsg[]) {
   return [turns[0], ...turns.slice(-(MAX_MESSAGES - 1))];
 }
 
-export function conversationTitle({messages}: Conversation) {
+export const conversationTitle = ({messages, comparison}: Conversation) => {
+  if (comparison) return comparison.names.join(' · ');
+
   return (messages.find(m => m.role === 'user')?.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 100);
-}
+};
 
 const ChatHistoryContext = createContext<{
   ready: boolean;
   conversations: Conversation[];
-  save: (chat: Conversation) => void;
+  save: (chat: Conversation, update?: 'messages' | 'summary') => void;
 }>({ready: false, conversations: [], save: () => {}});
 
 export const useChatHistory = () => useContext(ChatHistoryContext);
@@ -101,15 +114,22 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const save = useCallback((chat: Conversation) => {
+  const save = useCallback((chat: Conversation, update?: 'messages' | 'summary') => {
     const validated = conversation.safeParse({
       ...chat,
       messages: recentMessages(chat.messages),
     });
-    if (!validated.success || !validated.data.messages.length) return;
+    if (!validated.success || (!validated.data.messages.length && !validated.data.comparison)) return;
     const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
-    if (JSON.stringify(current[0]) === JSON.stringify(validated.data)) return;
-    const updated = [validated.data, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
+    const previous = current.find(item => item.id === chat.id);
+    const next = validated.data;
+    if (next.comparison && previous?.comparison) {
+      if (update === 'summary') next.messages = previous.messages;
+      if (update === 'messages') next.comparison.summary = previous.comparison.summary;
+      else next.comparison.summary ??= previous.comparison.summary;
+    }
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    const updated = [next, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
     if (!memoryOnly.current) {
       let stored = JSON.stringify(updated);
       while (stored.length > MAX_STORAGE_CHARS && updated.length > 1) {

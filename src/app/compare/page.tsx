@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, Suspense, useMemo, useRef, useState} from 'react';
 import {Card} from '@astryxdesign/core/Card';
 import {Button} from '@astryxdesign/core/Button';
 import {Link} from '@astryxdesign/core/Link';
@@ -17,12 +17,12 @@ import {BackArrow} from '@/components/BackArrow';
 import {PageHeader} from '@/components/PageHeader';
 import {SourceCards} from '@/components/SourceCards';
 import {ChatTurns} from '@/components/ChatTurns';
-import {limitText, useChat, type HistoryItem} from '@/lib/useChat';
+import {assistantMsg, limitText, useChat, type ChatMsg, type HistoryItem} from '@/lib/useChat';
 import {linkCitations, readNdjson, type SourceCardData} from '@/lib/citations';
-import {COMPARE_MAX} from '@/lib/compare';
+import {comparisonIds, comparisonKey} from '@/lib/compare';
+import {useChatHistory, type Conversation} from '@/lib/chatHistory';
 import {useApi} from '@/lib/useApi';
-import {saveChatSeed} from '@/lib/chatSeed';
-import {useRouter} from 'next/navigation';
+import {useSearchParams} from 'next/navigation';
 
 interface Detail {
   investigation: {
@@ -51,40 +51,66 @@ const paramText = (p: Detail['parameters'][number]) =>
   (p.unit ? ` ${p.unit}` : '');
 
 export default function ComparePage() {
+  return <Suspense><ComparisonRoute /></Suspense>;
+}
+
+function ComparisonRoute() {
+  const {t} = useSettings();
+  const {ready, conversations} = useChatHistory();
+  const raw = useSearchParams().get('ids') ?? '';
+  const ids = useMemo(() => comparisonIds(raw), [raw]);
+  const id = comparisonKey(ids);
+  if (!ready) return null;
+  if (ids.length < 2) return (
+    <div className="igris-page">
+      <div className="igris-content">
+        <EmptyState title={t.compareTitle} description={t.compareNeedTwo} actions={<BackArrow href="/catalog" label={t.back} />} />
+      </div>
+    </div>
+  );
+
+  const saved = conversations.find(chat => chat.id === id);
+  return <Comparison key={id} id={id} ids={saved?.comparison?.ids ?? ids} saved={saved} />;
+}
+
+function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; saved?: Conversation}) {
+  const [ids] = useState(requestedIds);
   const {t, lang} = useSettings();
-  const [ids, setIds] = useState<string[] | null>(null);
+  const {save} = useChatHistory();
   const [invs, setInvs] = useState<Inv[] | null>(null);
   const [factsError, setFactsError] = useState(false);
-
   const [steps, setSteps] = useState<Step[]>([]);
-  const [cards, setCards] = useState<SourceCardData[]>([]);
-  const [answer, setAnswer] = useState('');
+  const [cards, setCards] = useState<SourceCardData[]>(saved?.comparison?.summary?.cards ?? []);
+  const [answer, setAnswer] = useState(saved?.comparison?.summary?.content ?? '');
+  const [summary, setSummary] = useState<ChatMsg | null>(saved?.comparison?.summary ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [quota, setQuota] = useState<{left: number; perDay: number} | null>(null);
-  const started = useRef(false);
+  const hasSaved = useRef(Boolean(saved));
+  const request = useRef<AbortController | null>(null);
+  const autoStarted = useRef(false);
   const meta = useApi<{parameters: {id: string; label_en: string; label_uk: string}[]}>('/api/meta');
 
-  // /compare?ids=PSI-25,PSI-98
   useEffect(() => {
-    const raw = new URLSearchParams(window.location.search).get('ids') ?? '';
-    setIds([...new Set(raw.split(',').map(s => s.trim().toUpperCase()).filter(s => /^PSI-\d+$/.test(s)))].slice(0, COMPARE_MAX));
-  }, []);
-
-  // Key facts come straight from the database, no AI involved.
-  useEffect(() => {
-    if (!ids || ids.length < 2) return;
-    Promise.all(ids.map(id => fetch(`/api/investigations/${encodeURIComponent(id)}`).then(r => (r.ok ? (r.json() as Promise<Detail>) : null))))
+    const controller = new AbortController();
+    Promise.all(ids.map(id => fetch(`/api/investigations/${encodeURIComponent(id)}`, {signal: controller.signal})
+      .then(r => (r.ok ? (r.json() as Promise<Detail>) : null))))
       .then(list => {
+        if (controller.signal.aborted) return;
         const found = list.flatMap(d => (d?.investigation ? [{...d.investigation, params: d.parameters, pubs: d.publications.length}] : []));
         setInvs(found);
-        if (found.length === 0) setFactsError(true);
+        if (found.length !== ids.length) setFactsError(true);
       })
-      .catch(() => setFactsError(true));
+      .catch(() => { if (!controller.signal.aborted) setFactsError(true); });
+    return () => controller.abort();
   }, [ids]);
 
+  useEffect(() => () => request.current?.abort(), []);
+
   const run = useCallback(async () => {
-    if (!ids || ids.length < 2) return;
+    if (request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
     setBusy(true);
     setError(null);
     setSteps([]);
@@ -95,6 +121,7 @@ export default function ComparePage() {
         method: 'POST',
         headers: {'content-type': 'application/json'},
         body: JSON.stringify({ids, lang}),
+        signal: controller.signal,
       });
       if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
@@ -102,63 +129,70 @@ export default function ComparePage() {
         setError(res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel);
         return;
       }
+      let text = '';
+      let sources: SourceCardData[] = [];
+      let completed = false;
+      let failed = false;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await readNdjson(res.body, (ev: any) => {
-        if (ev.type === 'delta') setAnswer(a => a + ev.text);
-        else if (ev.type === 'step') setSteps(s => [...s.filter(x => x.id !== ev.id), {id: ev.id, status: ev.status, detail: ev.detail}]);
-        else if (ev.type === 'sources') setCards(ev.cards);
-        else if (ev.type === 'done') setQuota({left: ev.remainingToday, perDay: ev.perDay});
-        else if (ev.type === 'error') setError(t.errModel);
+        if (ev.type === 'delta') {
+          text += ev.text;
+          setAnswer(text);
+        } else if (ev.type === 'step') {
+          setSteps(s => [...s.filter(x => x.id !== ev.id), {id: ev.id, status: ev.status, detail: ev.detail}]);
+        } else if (ev.type === 'sources') {
+          sources = ev.cards;
+          setCards(sources);
+        } else if (ev.type === 'done') {
+          completed = true;
+          setQuota({left: ev.remainingToday, perDay: ev.perDay});
+        } else if (ev.type === 'error') failed = true;
       });
+      if (completed && !failed && text.trim()) setSummary(assistantMsg(text, sources));
+      else setError(t.errModel);
     } catch {
-      setError(t.errModel);
+      if (!controller.signal.aborted) setError(t.errModel);
     } finally {
-      setBusy(false);
+      request.current = null;
+      if (!controller.signal.aborted) setBusy(false);
     }
   }, [ids, lang, t]);
 
-  // Follow-up questions under the comparison. The comparison itself is the start of the conversation (prefix),
-  // and the compared ids are always retrieved (focus), so "which one is newer?" knows what "one" means.
-  const names = useMemo(() => (ids ?? []).map(id => invs?.find(i => i.id === id)?.acronym ?? id), [ids, invs]);
-  const seedQuestion = t.compareSeedQuestion(names.join(', '));
-  const prefix = useMemo<HistoryItem[]>(
-    () => (answer && !busy ? [{role: 'user', content: seedQuestion}, {role: 'assistant', content: answer}] : []),
-    [answer, busy, seedQuestion],
-  );
-  const followUp = useChat({focus: ids, prefix});
-
-  // Continue in the assistant with the comparison and every follow-up so far.
-  const router = useRouter();
-  const openChat = () => {
-    if (!ids) return;
-    saveChatSeed({
-      focus: {ids, names},
-      messages: [
-        {role: 'user', content: seedQuestion, cards: []},
-        {role: 'assistant', content: answer, cards},
-        ...followUp.messages.filter(m => m.content && !m.error).map(m => ({role: m.role, content: m.content, cards: m.cards})),
-      ],
-    });
-    router.push('/?from=compare');
+  const names = ids.map(invId => invs?.find(inv => inv.id === invId)?.acronym ?? invId);
+  const seedQuestion = t.compareSeedQuestion((saved?.comparison?.names ?? names).join(', '));
+  const prefix = useMemo<HistoryItem[]>(() => [
+    {role: 'user', content: seedQuestion},
+    ...(summary ? [{role: 'assistant' as const, content: summary.content}] : []),
+  ], [summary, seedQuestion]);
+  const changed = useRef(false);
+  const persist = (messages: ChatMsg[], update: 'messages' | 'summary') => {
+    const comparison = {ids, names: saved?.comparison?.names ?? names, summary};
+    save({id, messages, focus: {ids, names: comparison.names}, comparison}, update);
   };
+  const followUp = useChat({
+    focus: ids, prefix, initialMessages: saved?.messages,
+    onQuestion: messages => {
+      changed.current = true;
+      persist(messages, 'messages');
+    },
+  });
 
-  // Start the AI comparison once when the page opens.
   useEffect(() => {
-    if (ids && ids.length >= 2 && !started.current) {
-      started.current = true;
+    if (!invs || factsError || hasSaved.current || autoStarted.current) return;
+    const timer = window.setTimeout(() => {
+      autoStarted.current = true;
       void run();
-    }
-  }, [ids, run]);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [invs, factsError, run]);
 
-  if (ids === null) return null;
-  if (ids.length < 2)
-    return (
-      <div className="igris-page">
-        <div className="igris-content">
-          <EmptyState title={t.compareTitle} description={t.compareNeedTwo} actions={<BackArrow href="/catalog" label={t.back} />} />
-        </div>
-      </div>
-    );
+  useEffect(() => {
+    if (!invs || factsError || busy || followUp.busy || (!saved && !autoStarted.current)) return;
+    if (!saved || (summary && summary.content !== saved.comparison?.summary?.content) || changed.current) {
+      persist(followUp.messages, changed.current ? 'messages' : 'summary');
+      changed.current = false;
+    }
+  });
 
   const list = invs ?? [];
   const cell = (fn: (i: Inv) => React.ReactNode) => Object.fromEntries(list.map(i => [i.id, fn(i)]));
@@ -249,16 +283,20 @@ export default function ComparePage() {
                   <Button label={t.compareRetry} size="sm" onClick={() => void run()} isDisabled={busy} />
                 </HStack>
               )}
+              {saved && !summary && !busy && !error && (
+                <Button label={t.compareGenerate} size="sm" onClick={() => void run()} />
+              )}
               {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} />}
             </VStack>
           </Card>
 
-          {answer && !busy && !error && (
+          {invs && !factsError && !busy && (
             <Card>
               <VStack gap={3}>
                 <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
                   <Heading level={2}>{t.compareAskTitle}</Heading>
-                  <Button label={t.compareToChat} variant="ghost" size="sm" isDisabled={followUp.busy} onClick={openChat} />
+                  <Button label={t.compareToChat} variant="ghost" size="sm" isDisabled={followUp.busy}
+                    href={`/?chat=${encodeURIComponent(id)}`} />
                 </HStack>
                 {followUp.messages.length > 0 && (
                   <VStack gap={3}>
