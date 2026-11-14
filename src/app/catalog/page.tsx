@@ -212,8 +212,9 @@ export default function CatalogPage() {
               <EmptyState title={t.emptyDbTitle} description={t.emptyDbBody} />
             )
           ) : (
-            <div className="igris-scroll-x" role="region" aria-label={t.catalogTitle} tabIndex={0}>
+            <div className="igris-table">
               <Table<InvestigationRow>
+                aria-label={t.catalogTitle}
                 data={rows}
                 columns={columns}
                 idKey="id"

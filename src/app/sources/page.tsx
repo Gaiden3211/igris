@@ -11,32 +11,28 @@ import {PageHeader} from '@/components/PageHeader';
 
 interface Meta {
   sources: {kind: string; title: string; url: string; publisher: string | null; license_note: string | null; used_for: string | null}[];
-  dataUpdatedAt: string | null;
   model: string;
 }
 
 export default function SourcesPage() {
-  const {t, lang} = useSettings();
+  const {t} = useSettings();
   const meta = useApi<Meta>('/api/meta');
   const kinds: [string, string][] = [
-    ['data', t.kindData], ['reference', t.kindReference], ['image', t.kindImage], ['software', t.kindSoftware], ['ai', t.kindAi],
+    ['data', t.kindData], ['reference', t.kindReference], ['image', t.kindImage],
   ];
-  const updated = meta.data?.dataUpdatedAt
-    ? new Date(meta.data.dataUpdatedAt).toLocaleDateString(lang === 'uk' ? 'uk-UA' : 'en-GB', {year: 'numeric', month: 'long', day: 'numeric'})
-    : t.never;
+  const radiumUrl = meta.data?.sources.find(source => source.kind === 'ai')?.url;
 
   return (
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <PageHeader title={t.sourcesTitle} subtitle={t.sourcesSubtitle} />
+          <PageHeader title={t.sourcesTitle} />
           <Card>
             <VStack gap={2}>
               <Heading level={2}>{t.aiUseTitle}</Heading>
               {t.aiUse.map(line => (
                 <Text key={line}>• {line}</Text>
               ))}
-              {meta.data && <Text color="secondary">Model: {meta.data.model} · {t.dataUpdated}: {updated}</Text>}
             </VStack>
           </Card>
           {meta.error && <EmptyState title={meta.error === 'not_configured' ? t.errNoDb : t.errData} />}
@@ -59,6 +55,15 @@ export default function SourcesPage() {
               </Card>
             );
           })}
+          {meta.data && (
+            <Card>
+              <VStack gap={2}>
+                <Heading level={2}>{t.kindAi}</Heading>
+                {radiumUrl ? <Link href={radiumUrl}>Radium API</Link> : <Text>Radium API</Text>}
+                <Text color="secondary">{t.model}: {meta.data.model}</Text>
+              </VStack>
+            </Card>
+          )}
           <Text type="supporting" color="secondary">{t.disclaimer}</Text>
         </VStack>
       </div>

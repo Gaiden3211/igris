@@ -30,10 +30,6 @@ html, body { height: 100%; }
   justify-content: space-between;
   gap: var(--spacing-3);
 }
-/* Comparison facts: wide tables scroll sideways inside their card instead of the page. */
-.igris-scroll-x { min-width: 0; max-width: 100%; overflow-x: auto; }
-.igris-scroll-x > * { min-width: 680px; }
-
 .igris-shell {
   --igris-bg: light-dark(#fff, #212121);
   --igris-sidebar-bg: light-dark(#f8f8f8, #171717);
@@ -81,11 +77,8 @@ html, body { height: 100%; }
 .igris-dialog { width: min(420px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); margin: auto; background: var(--igris-bg); border: 1px solid var(--color-border); border-radius: 16px; }
 .igris-dialog-content { display: grid; gap: 16px; padding: 22px; }
 .igris-dialog-content h2 { font-size: 22px; font-weight: 650; }
-.igris-setting { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.igris-setting select { appearance: auto; min-height: 40px; font-size: 16px; border: 1px solid var(--color-border-emphasized); border-radius: 8px; background: var(--igris-bg); color: inherit; padding: 6px 10px; }
 .igris-settings-info { display: grid; gap: 8px; border-top: 1px solid var(--color-border); padding-top: 14px; }
 .igris-settings-info h3 { font-weight: 600; }
-.igris-settings-info a { color: inherit; text-decoration: underline; text-underline-offset: .2em; }
 .igris-primary { min-height: 44px; border: 0; border-radius: 9px; background: var(--color-text-primary); color: var(--igris-bg); cursor: pointer; }
 @media (max-width: 768px) {
   .igris-sidebar { display: none; }
@@ -123,4 +116,40 @@ html, body { height: 100%; }
   .igris-compare-bar { bottom: 4px; }
   .igris-compare-actions { width: 100%; justify-content: flex-end; }
   .igris-chart-categories li { grid-template-columns: minmax(0, 1.5fr) minmax(40px, 1fr) 3ch; gap: 8px; }
+}
+
+:root { --igris-scroll-thumb: light-dark(#b9b9b9, #575757); }
+:where(.igris-shell *, .astryx-popover)::-webkit-scrollbar { width: 9px; height: 9px; }
+:where(.igris-shell *, .astryx-popover)::-webkit-scrollbar-track { background: transparent; }
+:where(.igris-shell *, .astryx-popover)::-webkit-scrollbar-thumb {
+  background: var(--igris-scroll-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+:where(.igris-shell *, .astryx-popover)::-webkit-scrollbar-corner { background: transparent; }
+@supports not selector(::-webkit-scrollbar) {
+  :where(.igris-shell *, .astryx-popover) { scrollbar-width: thin; scrollbar-color: var(--igris-scroll-thumb) transparent; }
+}
+.igris-table { min-width: 0; max-width: 100%; }
+.igris-table .astryx-table-scroll-wrapper { margin-inline: 0; }
+.igris-filters .astryx-selector, .astryx-popover:has(.astryx-selector-option-row) { border-radius: 14px; }
+.astryx-popover .astryx-selector-option-row { border-radius: 9px; }
+.igris-choice { border: 0; min-width: 0; margin: 0; padding: 0; }
+.igris-choice legend { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.igris-choice > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 4px; gap: 4px; background: var(--igris-hover); border-radius: 14px; }
+.igris-choice label { position: relative; min-width: 0; cursor: pointer; }
+.igris-choice input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.igris-choice label span { display: grid; place-items: center; text-align: center; min-height: 40px; padding: 6px 4px; border-radius: 10px; font-size: 14px; }
+.igris-choice input:checked + span { background: var(--igris-bg); box-shadow: 0 1px 3px #0003; font-weight: 600; }
+.igris-choice input:focus-visible + span { outline: 2px solid currentColor; outline-offset: -2px; }
+.igris-settings-info .igris-nav-link { justify-content: space-between; border: 1px solid var(--color-border); border-radius: 12px; }
+.igris-scenarios { border-top: 1px solid var(--color-border); padding-top: 6px; }
+.igris-scenarios summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 8px 10px; font-weight: 600; border-radius: 10px; cursor: pointer; }
+.igris-scenarios summary::-webkit-details-marker { display: none; }
+.igris-scenarios summary svg { width: 17px; height: 17px; flex: none; }
+.igris-scenarios[open] summary svg { transform: rotate(180deg); }
+.igris-scenarios summary:active { background: var(--igris-hover); }
+@media (hover: hover) and (pointer: fine) {
+  .igris-scenarios summary:hover { background: var(--igris-hover); }
 }

@@ -18,9 +18,10 @@ export async function GET(req: NextRequest) {
     if (domain) rows = rows.filter(r => r.domain_id === domain);
     const ids = new Set(rows.map(r => r.id));
 
-    const {data: params} = await db().from('investigation_parameters')
+    const {data: params, error: paramsError} = await db().from('investigation_parameters')
       .select('investigation_id,parameter_id,value_num,value_min,value_max,origin')
       .in('parameter_id', ['oxygen_pct', 'pressure_kpa']);
+    if (paramsError) throw paramsError;
     const mid = (p: {value_num: number | null; value_min: number | null; value_max: number | null}) =>
       p.value_num ?? (p.value_min != null && p.value_max != null ? (p.value_min + p.value_max) / 2 : (p.value_min ?? p.value_max));
     const byInv = new Map<string, {oxygen?: number; pressure?: number}>();

@@ -1,6 +1,7 @@
 'use client';
 
 import {Chart, ChartAxis, ChartGrid, bar, dot} from '@astryxdesign/charts';
+import {ChevronDownIcon} from '@heroicons/react/24/outline';
 import {Card} from '@astryxdesign/core/Card';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
@@ -122,8 +123,10 @@ export default function AnalyticsPage() {
                     />
                   )}
                   {scenarios.length > 0 && (
-                    <details className="igris-sources igris-scenarios">
-                      <summary>{t.scenarios}</summary>
+                    <details className="igris-scenarios">
+                      <summary>
+                        <span>{t.scenarios}</span><ChevronDownIcon aria-hidden="true" />
+                      </summary>
                       <dl>
                         {scenarios.map(s => (
                           <div key={s.id}>

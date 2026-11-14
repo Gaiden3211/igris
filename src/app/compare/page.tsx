@@ -212,10 +212,8 @@ export default function ComparePage() {
               ) : !invs ? (
                 <HStack hAlign="center"><Spinner /></HStack>
               ) : (
-                <div className="igris-scroll-x" role="region" aria-label={t.compareFacts} tabIndex={0}>
-                  <div style={{minWidth: 150 + 180 * list.length}}>
-                    <Table<FactRow> data={facts} columns={columns} idKey="key" density="balanced" verticalAlign="top" />
-                  </div>
+                <div className="igris-table">
+                  <Table<FactRow> aria-label={t.compareFacts} data={facts} columns={columns} idKey="key" density="balanced" verticalAlign="top" />
                 </div>
               )}
             </VStack>

@@ -4,10 +4,39 @@ import Link from 'next/link';
 import {usePathname, useRouter} from 'next/navigation';
 import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {
-  Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
+  Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, ChevronRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {conversationTitle, useChatHistory} from '@/lib/chatHistory';
 import {useSettings} from '@/app/providers';
+import type {Lang} from '@/lib/i18n';
+
+const languageOptions = [
+  {value: 'en', label: 'English', lang: 'en'},
+  {value: 'uk', label: 'Українська', lang: 'uk'},
+] as const;
+
+function SettingsChoice<T extends string>({label, name, value, options, onChange}: {
+  label: string;
+  name: string;
+  value: T;
+  options: readonly {value: T; label: string; lang?: string}[];
+  onChange: (value: T) => void;
+}) {
+  return (
+    <fieldset className="igris-choice">
+      <legend>{label}</legend>
+      <div>
+        {options.map(option => (
+          <label key={option.value}>
+            <input type="radio" name={name} checked={option.value === value} value={option.value}
+              onChange={() => onChange(option.value)} />
+            <span lang={option.lang}>{option.label}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
 export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
@@ -118,27 +147,17 @@ export function Shell({children}: {children: ReactNode}) {
             <h2 id="igris-settings-title">{t.settings}</h2>
             <button type="button" className="igris-icon-button" aria-label={t.close} onClick={() => settings.current?.close()}><XMarkIcon /></button>
           </div>
-          <label className="igris-setting">
-            {t.theme}
-            <select value={mode} onChange={event => set({mode: event.target.value === 'dark' ? 'dark' : 'light'})}>
-              <option value="light">{t.themeLight}</option>
-              <option value="dark">{t.themeDark}</option>
-            </select>
-          </label>
-          <label className="igris-setting">
-            {t.language}
-            <select value={lang} onChange={event => set({lang: event.target.value === 'uk' ? 'uk' : 'en'})}>
-              <option value="en" lang="en">English</option>
-              <option value="uk" lang="uk">Українська</option>
-            </select>
-          </label>
+          <SettingsChoice label={t.theme} name="settings-theme" value={mode}
+            options={[{value: 'light', label: t.themeLight}, {value: 'dark', label: t.themeDark}]}
+            onChange={mode => set({mode})} />
+          <SettingsChoice<Lang> label={t.language} name="settings-language" value={lang}
+            options={languageOptions} onChange={lang => set({lang})} />
           <section className="igris-settings-info">
             <h3>{t.additionalInfo}</h3>
-            <Link href="/sources" onClick={() => {
+            <Link href="/sources" className="igris-nav-link" onClick={() => {
               settings.current?.close();
               drawer.current?.close();
-            }}>{t.navSources}</Link>
-            <a href="https://github.com/Gaiden3211/igris">{t.projectRepository}</a>
+            }}>{t.navSources}<ChevronRightIcon aria-hidden="true" /></Link>
           </section>
         </div>
       </dialog>
@@ -150,13 +169,8 @@ export function Shell({children}: {children: ReactNode}) {
           welcome.current?.close();
         }}>
           <h2 id="igris-welcome-title">{t.welcomeTitle}</h2>
-          <label className="igris-setting">
-            {t.language}
-            <select value={lang} onChange={event => set({lang: event.target.value === 'uk' ? 'uk' : 'en'})}>
-              <option value="en" lang="en">English</option>
-              <option value="uk" lang="uk">Українська</option>
-            </select>
-          </label>
+          <SettingsChoice<Lang> label={t.language} name="welcome-language" value={lang}
+            options={languageOptions} onChange={lang => set({lang})} />
           <button className="igris-primary" type="submit">{t.continue}</button>
         </form>
       </dialog>
