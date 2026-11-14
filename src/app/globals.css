@@ -90,7 +90,9 @@ html, body { height: 100%; }
 }
 
 .igris-new-chat { width: 100%; text-align: start; margin-bottom: 8px; background: var(--igris-hover); }
-.igris-sidebar-chats { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; margin-block: 22px 8px; }
+.igris-sidebar-chats { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; margin-block: 22px 8px; }
+.igris-sidebar-chats nav { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; }
+.igris-history-list { min-height: 0; overflow: auto; overscroll-behavior: contain; }
 .igris-sidebar-chats h2 { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); margin: 0 10px 6px; }
 .igris-sidebar-chats .igris-nav-link span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .igris-landing h1 { text-align: center; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.035em; }

@@ -2,13 +2,16 @@
 
 import Link from 'next/link';
 import {usePathname, useRouter} from 'next/navigation';
-import {useEffect, useRef, useState, type ReactNode} from 'react';
+import {createContext, useContext, useEffect, useRef, useState, type ReactNode} from 'react';
 import {
   Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, ChevronRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import {conversationTitle, useChatHistory} from '@/lib/chatHistory';
 import {useSettings} from '@/app/providers';
 import type {Lang} from '@/lib/i18n';
+
+const OpenSettingsContext = createContext(() => {});
+export const useOpenSettings = () => useContext(OpenSettingsContext);
 
 const languageOptions = [
   {value: 'en', label: 'English', lang: 'en'},
@@ -46,6 +49,14 @@ export function Shell({children}: {children: ReactNode}) {
   const drawer = useRef<HTMLDialogElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
   const welcome = useRef<HTMLDialogElement>(null);
+  const sourcesOrigin = useRef('');
+  const openSettings = () => {
+    if (path === '/sources' && sourcesOrigin.current) {
+      router.replace(sourcesOrigin.current);
+      sourcesOrigin.current = '';
+    }
+    settings.current?.showModal();
+  };
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
@@ -93,7 +104,8 @@ export function Shell({children}: {children: ReactNode}) {
         {conversations.length > 0 && (
           <nav aria-label={t.chatHistory}>
             <h2>{t.chatHistory}</h2>
-            {conversations.map(chat => {
+            <div className="igris-history-list">
+              {conversations.map(chat => {
               const title = conversationTitle(chat) || t.navChat;
               return (
                 <Link key={chat.id} href={`/?chat=${chat.id}`} className="igris-nav-link" title={title} prefetch={false}
@@ -101,15 +113,14 @@ export function Shell({children}: {children: ReactNode}) {
                   <span>{title}</span>
                 </Link>
               );
-            })}
+              })}
+            </div>
           </nav>
         )}
       </div>
       <div className="igris-sidebar-footer">
         <span>{t.anonymous}</span>
-        <button type="button" className="igris-icon-button" aria-label={t.settings} aria-haspopup="dialog" onClick={() => {
-          settings.current?.showModal();
-        }}>
+        <button type="button" className="igris-icon-button" aria-label={t.settings} aria-haspopup="dialog" onClick={() => settings.current?.showModal()}>
           <Cog6ToothIcon />
         </button>
       </div>
@@ -130,7 +141,9 @@ export function Shell({children}: {children: ReactNode}) {
           </button>
           <Link href="/" className="igris-wordmark">Igris</Link>
         </header>
-        <main id="igris-main" tabIndex={-1} className="igris-main">{children}</main>
+        <main id="igris-main" tabIndex={-1} className="igris-main">
+          <OpenSettingsContext.Provider value={openSettings}>{children}</OpenSettingsContext.Provider>
+        </main>
       </div>
 
       <dialog ref={drawer} className="igris-drawer" aria-label={t.navigation} onClick={event => {
@@ -154,7 +167,8 @@ export function Shell({children}: {children: ReactNode}) {
             options={languageOptions} onChange={lang => set({lang})} />
           <section className="igris-settings-info">
             <h3>{t.additionalInfo}</h3>
-            <Link href="/sources" className="igris-nav-link" onClick={() => {
+            <Link href="/sources" className="igris-nav-link" onNavigate={() => {
+              if (path !== '/sources') sourcesOrigin.current = window.location.pathname + window.location.search;
               settings.current?.close();
               drawer.current?.close();
             }}>{t.navSources}<ChevronRightIcon aria-hidden="true" /></Link>

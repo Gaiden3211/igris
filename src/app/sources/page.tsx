@@ -4,18 +4,21 @@ import {Card} from '@astryxdesign/core/Card';
 import {Link} from '@astryxdesign/core/Link';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {VStack} from '@astryxdesign/core/Layout';
+import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {useSettings} from '@/app/providers';
 import {useApi} from '@/lib/useApi';
+import {BackArrow} from '@/components/BackArrow';
+import {useOpenSettings} from '@/components/Shell';
 import {PageHeader} from '@/components/PageHeader';
 
 interface Meta {
-  sources: {kind: string; title: string; url: string; publisher: string | null; license_note: string | null; used_for: string | null}[];
+  sources: {kind: string; title: string; url: string}[];
   model: string;
 }
 
 export default function SourcesPage() {
   const {t} = useSettings();
+  const openSettings = useOpenSettings();
   const meta = useApi<Meta>('/api/meta');
   const kinds: [string, string][] = [
     ['data', t.kindData], ['reference', t.kindReference], ['image', t.kindImage],
@@ -26,7 +29,10 @@ export default function SourcesPage() {
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <PageHeader title={t.sourcesTitle} />
+          <HStack gap={2} vAlign="center">
+            <BackArrow label={t.backToSettings} onClick={openSettings} />
+            <PageHeader title={t.sourcesTitle} />
+          </HStack>
           <Card>
             <VStack gap={2}>
               <Heading level={2}>{t.aiUseTitle}</Heading>
@@ -43,14 +49,7 @@ export default function SourcesPage() {
               <Card key={kind}>
                 <VStack gap={3}>
                   <Heading level={2}>{label}</Heading>
-                  {items.map(s => (
-                    <VStack key={s.url} gap={0}>
-                      <Link href={s.url}>{s.title}</Link>
-                      <Text type="supporting" color="secondary">
-                        {[s.publisher, s.used_for, s.license_note].filter(Boolean).join(' · ')}
-                      </Text>
-                    </VStack>
-                  ))}
+                  {items.map(s => <Link key={s.url} href={s.url}>{s.title}</Link>)}
                 </VStack>
               </Card>
             );
@@ -59,8 +58,10 @@ export default function SourcesPage() {
             <Card>
               <VStack gap={2}>
                 <Heading level={2}>{t.kindAi}</Heading>
-                {radiumUrl ? <Link href={radiumUrl}>Radium API</Link> : <Text>Radium API</Text>}
-                <Text color="secondary">{t.model}: {meta.data.model}</Text>
+                <HStack gap={2} vAlign="center" wrap="wrap">
+                  {radiumUrl ? <Link href={radiumUrl}>Radium API</Link> : <Text>Radium API</Text>}
+                  <Text>{t.model}: {meta.data.model}</Text>
+                </HStack>
               </VStack>
             </Card>
           )}

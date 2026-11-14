@@ -13,6 +13,7 @@ import {Table, pixel, proportional, type TableColumn} from '@astryxdesign/core/T
 import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {DEFAULT_DAILY_LIMIT} from '@/lib/quota';
 import {useSettings} from '@/app/providers';
+import {BackArrow} from '@/components/BackArrow';
 import {PageHeader} from '@/components/PageHeader';
 import {SourceCards} from '@/components/SourceCards';
 import {ChatTurns} from '@/components/ChatTurns';
@@ -154,7 +155,7 @@ export default function ComparePage() {
     return (
       <div className="igris-page">
         <div className="igris-content">
-          <EmptyState title={t.compareTitle} description={t.compareNeedTwo} actions={<Button label={t.back} href="/catalog" />} />
+          <EmptyState title={t.compareTitle} description={t.compareNeedTwo} actions={<BackArrow href="/catalog" label={t.back} />} />
         </div>
       </div>
     );
@@ -200,10 +201,10 @@ export default function ComparePage() {
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <VStack gap={2}>
-            <Link href="/catalog">← {t.back}</Link>
+          <HStack gap={2} vAlign="center">
+            <BackArrow href="/catalog" label={t.back} />
             <PageHeader title={t.compareTitle} />
-          </VStack>
+          </HStack>
 
           <Card>
             <VStack gap={3}>

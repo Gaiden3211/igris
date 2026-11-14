@@ -84,7 +84,7 @@ export default function CatalogPage() {
   }, [q, sub, hardware, data, sort]);
   const res = useApi<CatalogResponse>(url);
 
-  // Selection for comparison: at most COMPARE_MAX rows; "select all" fills up to the cap in the current order.
+  // Selection for comparison: at most COMPARE_MAX rows.
   const rows = useMemo(() => res.data?.rows ?? [], [res.data]);
   const [selected, setSelected] = useCompareSelection();
   const [labels, setLabels] = useState<Record<string, string>>({});
@@ -101,15 +101,14 @@ export default function CatalogPage() {
   const selectionPlugin = useTableSelection<InvestigationRow>({
     ...selectionConfig,
     getRowLabel: r => r.acronym ?? r.title,
-    onSelectAll: ({isAllSelected}) =>
-      isAllSelected
-        ? setSelected(prev => {
-            const next = new Set(prev);
-            for (const r of rows) if (next.size < COMPARE_MAX) next.add(r.id);
-            return next;
-          })
-        : setSelected(new Set()),
   });
+  const rowSelection = {
+    ...selectionPlugin,
+    transformColumns(columns: TableColumn<InvestigationRow>[]) {
+      const [checkbox, ...rest] = selectionPlugin.transformColumns?.(columns) ?? columns;
+      return checkbox ? [{...checkbox, header: null}, ...rest] : rest;
+    },
+  };
   const unselect = (id: string) =>
     setSelected(prev => {
       const next = new Set(prev);
@@ -131,12 +130,7 @@ export default function CatalogPage() {
       key: 'title',
       header: t.colName,
       width: proportional(3, {minWidth: 260}),
-      renderCell: r => (
-        <VStack gap={0}>
-          <Link href={`/investigations/${r.id}`}>{r.acronym ?? r.title}</Link>
-          {r.acronym && <Text type="supporting" color="secondary">{r.title}</Text>}
-        </VStack>
-      ),
+      renderCell: r => <Link href={`/investigations/${r.id}`}>{r.acronym ?? r.title}</Link>,
     },
     {key: 'sub_research_area', header: t.colTopic, width: proportional(2, {minWidth: 160}), renderCell: r => r.sub_research_area ?? '—'},
     {key: 'start_date', header: t.colYears, width: pixel(110), renderCell: r => years(r)},
@@ -221,7 +215,7 @@ export default function CatalogPage() {
                 density="balanced"
                 hasHover
                 verticalAlign="top"
-                plugins={{selection: selectionPlugin}}
+                plugins={{selection: rowSelection}}
               />
             </div>
           )}
