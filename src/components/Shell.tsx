@@ -1,101 +1,140 @@
 'use client';
 
+import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useEffect, useState} from 'react';
-import {AppShell} from '@astryxdesign/core/AppShell';
-import {SideNav, SideNavHeading, SideNavItem, SideNavSection} from '@astryxdesign/core/SideNav';
-import {Selector} from '@astryxdesign/core/Selector';
-import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
-import {VStack} from '@astryxdesign/core/Layout';
-import {Text} from '@astryxdesign/core/Text';
+import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {
-  ChatBubbleLeftRightIcon,
-  Squares2X2Icon,
-  ChartBarIcon,
-  BookOpenIcon,
+  Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
-import {useSettings, type Glow, type Mode} from '@/app/providers';
-import type {Lang} from '@/lib/i18n';
-import {useApi} from '@/lib/useApi';
+import {useSettings} from '@/app/providers';
 
-interface Meta {
-  domains: {id: string; name: string}[];
-}
-
-export function Shell({children}: {children: React.ReactNode}) {
+export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
-  const {t, mode, lang, glow, domain, set} = useSettings();
-  const meta = useApi<Meta>('/api/meta');
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
+  const drawer = useRef<HTMLDialogElement>(null);
+  const settings = useRef<HTMLDialogElement>(null);
+  const welcome = useRef<HTMLDialogElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const dialog = welcome.current;
+    if (ready && !welcomed && dialog && !dialog.open) dialog.showModal();
+  }, [ready, welcomed]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 769px)');
+    const closeDrawer = () => { if (desktop.matches) drawer.current?.close(); };
+    desktop.addEventListener('change', closeDrawer);
+    return () => desktop.removeEventListener('change', closeDrawer);
+  }, []);
 
   const nav = [
-    {href: '/', label: t.navChat, icon: ChatBubbleLeftRightIcon, on: path === '/'},
-    {href: '/catalog', label: t.navCatalog, icon: Squares2X2Icon, on: path.startsWith('/catalog') || path.startsWith('/investigations') || path.startsWith('/compare')},
-    {href: '/analytics', label: t.navAnalytics, icon: ChartBarIcon, on: path.startsWith('/analytics')},
-    {href: '/sources', label: t.navSources, icon: BookOpenIcon, on: path.startsWith('/sources')},
+    {href: '/', label: t.navChat, icon: ChatBubbleLeftRightIcon, active: path === '/'},
+    {href: '/catalog', label: t.navCatalog, icon: Squares2X2Icon, active: /^(\/catalog|\/investigations|\/compare)/.test(path)},
+    {href: '/analytics', label: t.navAnalytics, icon: ChartBarIcon, active: path === '/analytics'},
   ];
 
-  const domainOptions = [{value: 'all', label: t.allAreas}, ...(meta.data?.domains ?? []).map(d => ({value: d.id, label: d.name}))];
+  const sidebar = (mobile: boolean) => (
+    <div className="igris-sidebar-inner">
+      <div className="igris-sidebar-header">
+        <Link href="/" className="igris-wordmark" onClick={() => drawer.current?.close()}>Igris</Link>
+        <button type="button" className="igris-icon-button" aria-label={mobile ? t.close : t.hideSidebar}
+          onClick={() => mobile ? drawer.current?.close() : setCollapsed(true)}>
+          {mobile ? <XMarkIcon /> : <Bars3Icon />}
+        </button>
+      </div>
+      <nav className="igris-sidebar-nav" aria-label={t.navigation}>
+        {nav.map(({href, label, icon: Icon, active}) => (
+          <Link key={href} href={href} className="igris-nav-link" aria-current={active ? 'page' : undefined}
+            onClick={() => drawer.current?.close()}>
+            <Icon aria-hidden="true" />{label}
+          </Link>
+        ))}
+      </nav>
+      <div className="igris-sidebar-footer">
+        <span>{t.anonymous}</span>
+        <button type="button" className="igris-icon-button" aria-label={t.settings} aria-haspopup="dialog" onClick={() => {
+          settings.current?.showModal();
+        }}>
+          <Cog6ToothIcon />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <AppShell
-      height="fill"
-      contentPadding={0}
-      sideNav={
-        <SideNav
-          collapsible
-          header={<SideNavHeading heading="Igris" subheading={t.appTagline} headingHref="/" />}
-          footer={
-            mounted ? (
-              <VStack gap={3}>
-                <Selector
-                  label={t.area}
-                  size="sm"
-                  options={domainOptions}
-                  value={domain || 'all'}
-                  onChange={v => set({domain: !v || v === 'all' ? '' : v})}
-                />
-                <Selector
-                  label={t.glow}
-                  size="sm"
-                  options={[
-                    {value: 'mono', label: t.glowMono},
-                    {value: 'amber', label: t.glowAmber},
-                    {value: 'blue', label: t.glowBlue},
-                    {value: 'violet', label: t.glowViolet},
-                    {value: 'green', label: t.glowGreen},
-                    {value: 'off', label: t.glowOff},
-                  ]}
-                  value={glow}
-                  onChange={v => v && set({glow: v as Glow})}
-                />
-                <VStack gap={1}>
-                  <Text type="supporting" color="secondary">{t.theme}</Text>
-                  <SegmentedControl label={t.theme} size="sm" layout="fill" value={mode} onChange={v => set({mode: v as Mode})}>
-                    <SegmentedControlItem value="light" label={t.themeLight} />
-                    <SegmentedControlItem value="dark" label={t.themeDark} />
-                    <SegmentedControlItem value="system" label={t.themeSystem} />
-                  </SegmentedControl>
-                </VStack>
-                <VStack gap={1}>
-                  <Text type="supporting" color="secondary">{t.language}</Text>
-                  <SegmentedControl label={t.language} size="sm" layout="fill" value={lang} onChange={v => set({lang: v as Lang})}>
-                    <SegmentedControlItem value="en" label="English" />
-                    <SegmentedControlItem value="uk" label="Українська" />
-                  </SegmentedControl>
-                </VStack>
-              </VStack>
-            ) : null
-          }>
-          <SideNavSection title="Igris" isHeaderHidden>
-            {nav.map(n => (
-              <SideNavItem key={n.href} label={n.label} href={n.href} icon={n.icon} isSelected={n.on} />
-            ))}
-          </SideNavSection>
-        </SideNav>
-      }>
-      {children}
-    </AppShell>
+    <div className="igris-shell" data-collapsed={collapsed}>
+      <a className="igris-skip" href="#igris-main">{t.skip}</a>
+      <aside className="igris-sidebar">{sidebar(false)}</aside>
+      <div className="igris-shell-body">
+        <header className="igris-topbar">
+          <button type="button" className="igris-icon-button" aria-label={t.showSidebar} onClick={() => {
+            if (window.matchMedia('(min-width: 769px)').matches) setCollapsed(false);
+            else drawer.current?.showModal();
+          }}>
+            <Bars3Icon />
+          </button>
+          <Link href="/" className="igris-wordmark">Igris</Link>
+        </header>
+        <main id="igris-main" tabIndex={-1} className="igris-main">{children}</main>
+      </div>
+
+      <dialog ref={drawer} className="igris-drawer" aria-label={t.navigation} onClick={event => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}>
+        {sidebar(true)}
+      </dialog>
+
+      <dialog ref={settings} className="igris-dialog" aria-labelledby="igris-settings-title" onClick={event => {
+        if (event.target === event.currentTarget) event.currentTarget.close();
+      }}>
+        <div className="igris-dialog-content">
+          <div className="igris-dialog-heading">
+            <h2 id="igris-settings-title">{t.settings}</h2>
+            <button type="button" className="igris-icon-button" aria-label={t.close} onClick={() => settings.current?.close()}><XMarkIcon /></button>
+          </div>
+          <label className="igris-setting">
+            {t.theme}
+            <select value={mode} onChange={event => set({mode: event.target.value === 'dark' ? 'dark' : 'light'})}>
+              <option value="light">{t.themeLight}</option>
+              <option value="dark">{t.themeDark}</option>
+            </select>
+          </label>
+          <label className="igris-setting">
+            {t.language}
+            <select value={lang} onChange={event => set({lang: event.target.value === 'uk' ? 'uk' : 'en'})}>
+              <option value="en" lang="en">English</option>
+              <option value="uk" lang="uk">Українська</option>
+            </select>
+          </label>
+          <section className="igris-settings-info">
+            <h3>{t.additionalInfo}</h3>
+            <Link href="/sources" onClick={() => {
+              settings.current?.close();
+              drawer.current?.close();
+            }}>{t.navSources}</Link>
+            <a href="https://github.com/Gaiden3211/igris">{t.projectRepository}</a>
+          </section>
+        </div>
+      </dialog>
+
+      <dialog ref={welcome} className="igris-dialog" aria-labelledby="igris-welcome-title" onCancel={event => event.preventDefault()}>
+        <form className="igris-dialog-content" onSubmit={event => {
+          event.preventDefault();
+          finishWelcome();
+          welcome.current?.close();
+        }}>
+          <h2 id="igris-welcome-title">{t.welcomeTitle}</h2>
+          <label className="igris-setting">
+            {t.language}
+            <select value={lang} onChange={event => set({lang: event.target.value === 'uk' ? 'uk' : 'en'})}>
+              <option value="en" lang="en">English</option>
+              <option value="uk" lang="uk">Українська</option>
+            </select>
+          </label>
+          <button className="igris-primary" type="submit">{t.continue}</button>
+        </form>
+      </dialog>
+    </div>
   );
 }

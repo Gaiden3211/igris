@@ -1,11 +1,12 @@
 export type Lang = 'en' | 'uk';
 
 const en = {
-  appTagline: 'Research data, answered with sources',
   navChat: 'Assistant', navCatalog: 'Catalog', navAnalytics: 'Analytics', navSources: 'Sources & AI',
-  settings: 'Settings', theme: 'Theme', themeLight: 'Light', themeDark: 'Dark', themeSystem: 'System',
-  language: 'Language', glow: 'Background glow',
-  glowMono: 'Mono', glowAmber: 'Amber', glowBlue: 'Blue', glowViolet: 'Violet', glowGreen: 'Green', glowOff: 'Off',
+  settings: 'Settings', theme: 'Theme', themeLight: 'Light', themeDark: 'Dark',
+  language: 'Language',
+  anonymous: 'Anonymous user', navigation: 'Navigation', showSidebar: 'Open sidebar', hideSidebar: 'Hide sidebar',
+  close: 'Close', skip: 'Skip to content', additionalInfo: 'Additional information', projectRepository: 'Project on GitHub',
+  welcomeTitle: 'Welcome to Igris', continue: 'Continue',
   area: 'Research area', allAreas: 'All areas',
   chatTitle: 'What do you want to find?',
   chatSubtitle: 'Ask about microgravity investigations. Every answer links to its sources.',
@@ -79,11 +80,12 @@ const en = {
 };
 
 const uk: typeof en = {
-  appTagline: 'Дослідницькі дані з відповідями та джерелами',
   navChat: 'Асистент', navCatalog: 'Каталог', navAnalytics: 'Аналітика', navSources: 'Джерела та ШІ',
-  settings: 'Налаштування', theme: 'Тема', themeLight: 'Світла', themeDark: 'Темна', themeSystem: 'Системна',
-  language: 'Мова', glow: 'Світіння фону',
-  glowMono: 'Моно', glowAmber: 'Бурштин', glowBlue: 'Синій', glowViolet: 'Фіолет', glowGreen: 'Зелений', glowOff: 'Вимк.',
+  settings: 'Налаштування', theme: 'Тема', themeLight: 'Світла', themeDark: 'Темна',
+  language: 'Мова',
+  anonymous: 'Анонімний користувач', navigation: 'Навігація', showSidebar: 'Відкрити бічну панель', hideSidebar: 'Сховати бічну панель',
+  close: 'Закрити', skip: 'Перейти до вмісту', additionalInfo: 'Додаткова інформація', projectRepository: 'Проєкт на GitHub',
+  welcomeTitle: 'Вітаємо в Igris', continue: 'Продовжити',
   area: 'Напрям досліджень', allAreas: 'Усі напрями',
   chatTitle: 'Що хочете знайти?',
   chatSubtitle: 'Запитайте про експерименти в мікрогравітації. Кожна відповідь має посилання на джерела.',

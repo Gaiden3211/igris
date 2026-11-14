@@ -7,11 +7,11 @@ export const metadata: Metadata = {
   title: 'Igris — research data, answered with sources',
   description: 'Search, compare and understand microgravity investigations with an assistant that cites every source.',
 };
-export const viewport: Viewport = {width: 'device-width', initialScale: 1, viewportFit: 'cover'};
+export const viewport: Viewport = {width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content', themeColor: '#ffffff'};
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en" data-glow="mono" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
           <Shell>{children}</Shell>
