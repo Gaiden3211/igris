@@ -160,9 +160,7 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
       else next.comparison.summary ??= previous.comparison.summary;
     }
     if (JSON.stringify(previous) === JSON.stringify(next)) return;
-    const updated = [next, ...current.filter(item => item.id !== chat.id)]
-      .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
-      .slice(0, MAX_CHATS);
+    const updated = [next, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
     writeHistory(updated);
   }, [writeHistory]);
 

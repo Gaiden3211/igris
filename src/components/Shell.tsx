@@ -46,8 +46,7 @@ export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
   const router = useRouter();
   const {conversations, togglePin, removeChat} = useChatHistory();
-  const chats = conversations.filter(chat => !chat.comparison)
-    .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
+  const chats = conversations.filter(chat => !chat.comparison);
   const comparisons = conversations.filter(chat => chat.comparison);
   const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
   const drawer = useRef<HTMLDialogElement>(null);
