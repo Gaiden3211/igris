@@ -5,16 +5,16 @@ import {createContext, useCallback, useContext, useEffect, useMemo, useState} fr
 import {Theme} from '@astryxdesign/core/theme';
 import {LinkProvider} from '@astryxdesign/core/Link';
 import {neutralTheme} from '@astryxdesign/theme-neutral/built';
+import {ChatHistoryProvider} from '@/lib/chatHistory';
 import {dictionaries, type Dict, type Lang} from '@/lib/i18n';
 
 export type Mode = 'light' | 'dark';
 interface Settings {
   mode: Mode;
   lang: Lang;
-  domain: string;
   welcomed: boolean;
 }
-const DEFAULTS: Settings = {mode: 'light', lang: 'en', domain: '', welcomed: false};
+const DEFAULTS: Settings = {mode: 'light', lang: 'en', welcomed: false};
 const KEY = 'igris-settings';
 
 interface Ctx extends Settings {
@@ -37,7 +37,6 @@ export function Providers({children}: {children: React.ReactNode}) {
         setSettings({
           mode: saved.mode === 'dark' || (saved.mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light',
           lang: saved.lang === 'uk' ? 'uk' : 'en',
-          domain: typeof saved.domain === 'string' ? saved.domain : '',
           welcomed: saved.welcomed === true,
         });
       }
@@ -66,7 +65,7 @@ export function Providers({children}: {children: React.ReactNode}) {
   return (
     <SettingsContext.Provider value={value}>
       <Theme theme={neutralTheme} mode={settings.mode}>
-        <LinkProvider component={NextLink}>{children}</LinkProvider>
+        <LinkProvider component={NextLink}><ChatHistoryProvider>{children}</ChatHistoryProvider></LinkProvider>
       </Theme>
     </SettingsContext.Provider>
   );

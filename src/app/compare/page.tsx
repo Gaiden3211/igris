@@ -137,7 +137,7 @@ export default function ComparePage() {
         ...followUp.messages.filter(m => m.content && !m.error).map(m => ({role: m.role, content: m.content, cards: m.cards})),
       ],
     });
-    router.push('/');
+    router.push('/?from=compare');
   };
 
   // Start the AI comparison once when the page opens.
@@ -247,7 +247,7 @@ export default function ComparePage() {
                   <Button label={t.compareRetry} size="sm" onClick={() => void run()} isDisabled={busy} />
                 </HStack>
               )}
-              {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} note={t.aiNote} />}
+              {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} />}
               <Text type="supporting" color="secondary">{t.compareCostNote}</Text>
             </VStack>
           </Card>

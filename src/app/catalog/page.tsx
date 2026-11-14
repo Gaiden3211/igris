@@ -59,7 +59,7 @@ const years = (r: InvestigationRow) => {
 };
 
 export default function CatalogPage() {
-  const {t, domain} = useSettings();
+  const {t} = useSettings();
   const [input, setInput] = useState('');
   const [q, setQ] = useState('');
   const [sub, setSub] = useState('');
@@ -79,9 +79,9 @@ export default function CatalogPage() {
 
   const url = useMemo(() => {
     const p = new URLSearchParams();
-    Object.entries({q, domain, sub, hardware, data, sort}).forEach(([k, v]) => v && p.set(k, v));
+    Object.entries({q, sub, hardware, data, sort}).forEach(([k, v]) => v && p.set(k, v));
     return `/api/investigations?${p}`;
-  }, [q, domain, sub, hardware, data, sort]);
+  }, [q, sub, hardware, data, sort]);
   const res = useApi<CatalogResponse>(url);
 
   // Selection for comparison: at most COMPARE_MAX rows; "select all" fills up to the cap in the current order.

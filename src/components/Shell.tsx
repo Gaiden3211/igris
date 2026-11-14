@@ -1,15 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import {usePathname} from 'next/navigation';
+import {usePathname, useRouter} from 'next/navigation';
 import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {
-  Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, Squares2X2Icon, XMarkIcon,
+  Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
+import {conversationTitle, useChatHistory} from '@/lib/chatHistory';
 import {useSettings} from '@/app/providers';
 
 export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
+  const router = useRouter();
+  const {conversations} = useChatHistory();
   const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
   const drawer = useRef<HTMLDialogElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
@@ -43,6 +46,12 @@ export function Shell({children}: {children: ReactNode}) {
           {mobile ? <XMarkIcon /> : <Bars3Icon />}
         </button>
       </div>
+      <button type="button" className="igris-nav-link igris-new-chat" onClick={() => {
+        drawer.current?.close();
+        router.push(`/?chat=${crypto.randomUUID()}`);
+      }}>
+        <PencilSquareIcon aria-hidden="true" />{t.newChat}
+      </button>
       <nav className="igris-sidebar-nav" aria-label={t.navigation}>
         {nav.map(({href, label, icon: Icon, active}) => (
           <Link key={href} href={href} className="igris-nav-link" aria-current={active ? 'page' : undefined}
@@ -51,6 +60,22 @@ export function Shell({children}: {children: ReactNode}) {
           </Link>
         ))}
       </nav>
+      <div className="igris-sidebar-chats">
+        {conversations.length > 0 && (
+          <nav aria-label={t.chatHistory}>
+            <h2>{t.chatHistory}</h2>
+            {conversations.map(chat => {
+              const title = conversationTitle(chat) || t.navChat;
+              return (
+                <Link key={chat.id} href={`/?chat=${chat.id}`} className="igris-nav-link" title={title} prefetch={false}
+                  onClick={() => drawer.current?.close()}>
+                  <span>{title}</span>
+                </Link>
+              );
+            })}
+          </nav>
+        )}
+      </div>
       <div className="igris-sidebar-footer">
         <span>{t.anonymous}</span>
         <button type="button" className="igris-icon-button" aria-label={t.settings} aria-haspopup="dialog" onClick={() => {

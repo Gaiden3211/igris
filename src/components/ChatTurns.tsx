@@ -36,7 +36,7 @@ export function ChatTurns({messages, busy}: {messages: ChatMsg[]; busy: boolean}
             )}
             {m.cards.length > 0 && !(busy && i === messages.length - 1) && (
               <ChatMessageBubble variant="ghost" width="100%">
-                <SourceCards cards={m.cards} title={t.sources} note={t.aiNote} />
+                <SourceCards cards={m.cards} title={t.sources} />
               </ChatMessageBubble>
             )}
           </ChatMessage>

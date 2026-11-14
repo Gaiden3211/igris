@@ -95,3 +95,16 @@ html, body { height: 100%; }
 @media (pointer: coarse) {
   .igris-shell input, .igris-shell textarea, .igris-shell select { font-size: 16px; }
 }
+
+.igris-new-chat { width: 100%; text-align: start; margin-bottom: 8px; background: var(--igris-hover); }
+.igris-sidebar-chats { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; margin-block: 22px 8px; }
+.igris-sidebar-chats h2 { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); margin: 0 10px 6px; }
+.igris-sidebar-chats .igris-nav-link span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.igris-landing h1 { text-align: center; font-size: clamp(24px, 4vw, 34px); letter-spacing: -.035em; }
+.igris-chat-area { display: inline-grid; gap: 2px; font-size: 12px; color: var(--color-text-secondary); }
+.igris-chat-area select { appearance: auto; width: fit-content; max-width: min(240px, 57vw); color: var(--color-text-primary); background: var(--igris-hover); border-radius: 8px; padding: 4px 8px; min-height: 36px; }
+.igris-sources { font-size: 14px; }
+.igris-sources summary { width: fit-content; min-height: 36px; line-height: 20px; padding: 8px 10px; border: 1px solid var(--color-border); border-radius: 9px; cursor: pointer; }
+.igris-sources summary span, .igris-sources li > span { color: var(--color-text-secondary); }
+.igris-sources ul { display: grid; gap: 6px; margin-top: 8px; }
+.igris-sources li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; overflow-wrap: anywhere; }

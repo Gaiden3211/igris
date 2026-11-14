@@ -1,6 +1,6 @@
 'use client';
 
-import {useCallback, useRef, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useSettings} from '@/app/providers';
 import type {Dict} from './i18n';
 import {readNdjson, type SourceCardData} from './citations';
@@ -32,27 +32,37 @@ const HISTORY_TURNS = 8; // the server accepts at most 8
  * @param focus  investigation ids the server always retrieves (a conversation about a comparison)
  * @param prefix earlier turns that are not shown in `messages` but belong to the conversation (the comparison itself)
  */
-export function useChat({focus, prefix = []}: {focus?: string[] | null; prefix?: HistoryItem[]} = {}) {
-  const {t, domain} = useSettings();
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+export function useChat({focus, prefix = [], domain, initialMessages, onQuestion}: {
+  focus?: string[] | null;
+  prefix?: HistoryItem[];
+  domain?: string;
+  initialMessages?: ChatMsg[];
+  onQuestion?: (messages: ChatMsg[]) => void;
+} = {}) {
+  const {t} = useSettings();
+  const [messages, setMessages] = useState<ChatMsg[]>(initialMessages ?? []);
   const [busy, setBusy] = useState(false);
   const [quota, setQuota] = useState<{left: number; perDay: number} | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const abort = useRef<AbortController | null>(null);
+
+  useEffect(() => () => abort.current?.abort(), []);
 
   const patchLast = (fn: (m: ChatMsg) => ChatMsg) => setMessages(list => list.map((m, i) => (i === list.length - 1 ? fn(m) : m)));
 
   const send = useCallback(
     async (raw: string) => {
       const message = raw.trim();
-      if (!message || busy) return;
+      if (!message || abort.current) return;
       setNotice(null);
       setBusy(true);
       const shown = messages.filter(m => m.content && !m.error).map(m => ({role: m.role, content: m.content}));
       // Keep the prefix (the comparison) even in long threads: it is what the follow-ups are about.
       const recent = shown.slice(-Math.max(HISTORY_TURNS - prefix.length, 2));
       const history = [...prefix, ...recent].slice(-HISTORY_TURNS).map(h => ({role: h.role, content: h.content.slice(0, 6000)}));
-      setMessages(list => [...list, userMsg(message), assistantMsg('')]);
+      const nextMessages = [...messages.filter(m => m.content || m.error), userMsg(message)];
+      onQuestion?.(nextMessages);
+      setMessages([...nextMessages, assistantMsg('')]);
       const ctrl = new AbortController();
       abort.current = ctrl;
       try {
@@ -66,8 +76,11 @@ export function useChat({focus, prefix = []}: {focus?: string[] | null; prefix?:
           const body = await res.json().catch(() => ({}));
           const text = res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel;
           if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? 30});
-          setMessages(list => list.slice(0, -2));
-          setNotice(text);
+          if (onQuestion) patchLast(m => ({...m, error: text}));
+          else {
+            setMessages(list => list.slice(0, -2));
+            setNotice(text);
+          }
           return;
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -86,7 +99,7 @@ export function useChat({focus, prefix = []}: {focus?: string[] | null; prefix?:
         abort.current = null;
       }
     },
-    [busy, messages, domain, focus, prefix, t],
+    [messages, domain, focus, prefix, onQuestion, t],
   );
 
   const stop = () => abort.current?.abort();

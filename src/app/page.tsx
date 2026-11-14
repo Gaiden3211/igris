@@ -1,5 +1,6 @@
+import {Suspense} from 'react';
 import {ChatView} from '@/components/ChatView';
 
 export default function Home() {
-  return <ChatView />;
+  return <Suspense><ChatView /></Suspense>;
 }

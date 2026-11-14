@@ -56,8 +56,8 @@ function BarCard({title, data, countLabel, linkParam}: {title: string; data: Tal
 }
 
 export default function AnalyticsPage() {
-  const {t, lang, domain} = useSettings();
-  const res = useApi<Analytics>(`/api/analytics${domain ? `?domain=${domain}` : ''}`);
+  const {t, lang} = useSettings();
+  const res = useApi<Analytics>('/api/analytics');
   const meta = useApi<Meta>('/api/meta');
   const a = res.data;
 
