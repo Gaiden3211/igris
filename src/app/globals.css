@@ -154,3 +154,22 @@ html, body { height: 100%; }
 @media (hover: hover) and (pointer: fine) {
   .igris-scenarios summary:hover { background: var(--igris-hover); }
 }
+
+.igris-history-row { display: flex; align-items: center; border-radius: 8px; }
+.igris-history-row .igris-nav-link { flex: 1; min-width: 0; }
+.igris-history-actions { display: flex; align-items: center; padding-inline-end: 2px; }
+.igris-history-actions .igris-icon-button { width: 32px; height: 36px; }
+.igris-history-actions .igris-icon-button svg { width: 16px; height: 16px; }
+.igris-history-actions .igris-icon-button[aria-pressed="true"],
+.igris-history-actions .igris-icon-button[aria-expanded="true"] { background: var(--igris-hover); }
+.igris-history-menu, .astryx-dropdown-menu:has(.igris-history-menu) { border-radius: 12px; }
+.igris-delete-title { overflow-wrap: anywhere; color: var(--color-text-secondary); }
+.igris-delete-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.igris-delete-button { min-height: 44px; padding: 8px 14px; border-radius: 10px; background: #b42318; color: white; cursor: pointer; }
+@media (hover: hover) and (pointer: fine) {
+  .igris-history-row:not(:hover):not(:focus-within) .igris-icon-button:not([aria-pressed="true"]):not([aria-expanded="true"]) { opacity: 0; }
+  .igris-history-row:hover, .igris-history-row:focus-within { background: var(--igris-hover); }
+}
+@media (pointer: coarse) {
+  .igris-history-actions .igris-icon-button { width: 44px; height: 44px; }
+}

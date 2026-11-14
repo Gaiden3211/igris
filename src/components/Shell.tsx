@@ -6,7 +6,8 @@ import {createContext, useContext, useEffect, useRef, useState, type ReactNode} 
 import {
   Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, ChevronRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
-import {conversationTitle, useChatHistory} from '@/lib/chatHistory';
+import {conversationTitle, useChatHistory, type Conversation} from '@/lib/chatHistory';
+import {ChatHistoryRow} from './ChatHistoryRow';
 import {useSettings} from '@/app/providers';
 import type {Lang} from '@/lib/i18n';
 
@@ -44,13 +45,16 @@ function SettingsChoice<T extends string>({label, name, value, options, onChange
 export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
   const router = useRouter();
-  const {conversations} = useChatHistory();
-  const chats = conversations.filter(chat => !chat.comparison);
+  const {conversations, togglePin, removeChat} = useChatHistory();
+  const chats = conversations.filter(chat => !chat.comparison)
+    .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
   const comparisons = conversations.filter(chat => chat.comparison);
   const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
   const drawer = useRef<HTMLDialogElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
   const welcome = useRef<HTMLDialogElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
   const sourcesOrigin = useRef('');
   const openSettings = () => {
     if (path === '/sources' && sourcesOrigin.current) {
@@ -110,15 +114,14 @@ export function Shell({children}: {children: ReactNode}) {
           <nav key={title} aria-label={title}>
             <h2>{title}</h2>
             <div className="igris-history-list">
-              {items.map(chat => {
-                const label = conversationTitle(chat) || t.navChat;
-                return (
-                  <Link key={chat.id} href={`/?chat=${encodeURIComponent(chat.id)}`} className="igris-nav-link" title={label} prefetch={false}
-                    onClick={() => drawer.current?.close()}>
-                    <span>{label}</span>
-                  </Link>
-                );
-              })}
+              {items.map(chat => (
+                <ChatHistoryRow key={chat.id} chat={chat} onOpen={() => drawer.current?.close()}
+                  onPin={() => togglePin(chat.id)}
+                  onDelete={() => {
+                    setChatToDelete(chat);
+                    deleteDialog.current?.showModal();
+                  }} />
+              ))}
             </div>
           </nav>
         ))}
@@ -179,6 +182,29 @@ export function Shell({children}: {children: ReactNode}) {
             }}>{t.navSources}<ChevronRightIcon aria-hidden="true" /></Link>
           </section>
         </div>
+      </dialog>
+
+      <dialog ref={deleteDialog} className="igris-dialog" aria-labelledby="igris-delete-title"
+        onClose={() => setChatToDelete(null)}>
+        <form className="igris-dialog-content" onSubmit={event => {
+          event.preventDefault();
+          if (!chatToDelete) return;
+          const isActive = path === '/' && new URLSearchParams(window.location.search).get('chat') === chatToDelete.id;
+          removeChat(chatToDelete.id);
+          deleteDialog.current?.close();
+          if (isActive) {
+            drawer.current?.close();
+            router.replace('/');
+          }
+        }}>
+          <h2 id="igris-delete-title">{t.deleteChat}</h2>
+          <p>{t.deleteChatPrompt}</p>
+          {chatToDelete && <p className="igris-delete-title">{conversationTitle(chatToDelete)}</p>}
+          <div className="igris-delete-actions">
+            <button type="button" autoFocus className="igris-nav-link" onClick={() => deleteDialog.current?.close()}>{t.cancel}</button>
+            <button type="submit" className="igris-delete-button">{t.deleteChat}</button>
+          </div>
+        </form>
       </dialog>
 
       <dialog ref={welcome} className="igris-dialog" aria-labelledby="igris-welcome-title" onCancel={event => event.preventDefault()}>

@@ -14,6 +14,7 @@ const MAX_STORAGE_CHARS = 1_500_000;
 export interface Conversation {
   id: string;
   focus: ChatFocus | null;
+  pinned?: boolean;
   messages: ChatMsg[];
   comparison?: {ids: string[]; names: string[]; summary: ChatMsg | null};
 }
@@ -44,6 +45,7 @@ const conversation = z.object({
   id: z.union([z.uuid(), z.string().regex(/^comparison:PSI-\d{1,6}(,PSI-\d{1,6}){1,3}$/)]),
   focus: z.object({ids: z.array(z.string().regex(/^PSI-\d+$/)).max(4), names: z.array(z.string()).max(4)}).nullable(),
   messages: z.array(message).max(MAX_MESSAGES),
+  pinned: z.boolean().optional(),
   comparison: z.object({
     ids: z.array(z.string().regex(/^PSI-\d{1,6}$/)).min(2).max(COMPARE_MAX),
     names: z.array(z.string()).min(2).max(COMPARE_MAX),
@@ -87,7 +89,9 @@ const ChatHistoryContext = createContext<{
   ready: boolean;
   conversations: Conversation[];
   save: (chat: Conversation, update?: 'messages' | 'summary') => void;
-}>({ready: false, conversations: [], save: () => {}});
+  togglePin: (id: string) => void;
+  removeChat: (id: string) => void;
+}>({ready: false, conversations: [], save: () => {}, togglePin: () => {}, removeChat: () => {}});
 
 export const useChatHistory = () => useContext(ChatHistoryContext);
 
@@ -96,6 +100,7 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
   const [ready, setReady] = useState(false);
   const latest = useRef<Conversation[]>([]);
   const memoryOnly = useRef(false);
+  const removedChats = useRef(new Set<string>());
 
   useEffect(() => {
     const load = () => {
@@ -108,28 +113,19 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
     load();
     setReady(true);
     const onStorage = (event: StorageEvent) => {
-      if (event.key === STORAGE_KEY || event.key === null) load();
+      if (event.key !== STORAGE_KEY && event.key !== null) return;
+      const previous = latest.current;
+      load();
+      const currentIds = new Set(latest.current.map(chat => chat.id));
+      for (const chat of previous) {
+        if (!chat.comparison && !currentIds.has(chat.id)) removedChats.current.add(chat.id);
+      }
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  const save = useCallback((chat: Conversation, update?: 'messages' | 'summary') => {
-    const validated = conversation.safeParse({
-      ...chat,
-      messages: recentMessages(chat.messages),
-    });
-    if (!validated.success || (!validated.data.messages.length && !validated.data.comparison)) return;
-    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
-    const previous = current.find(item => item.id === chat.id);
-    const next = validated.data;
-    if (next.comparison && previous?.comparison) {
-      if (update === 'summary') next.messages = previous.messages;
-      if (update === 'messages') next.comparison.summary = previous.comparison.summary;
-      else next.comparison.summary ??= previous.comparison.summary;
-    }
-    if (JSON.stringify(previous) === JSON.stringify(next)) return;
-    const updated = [next, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
+  const writeHistory = useCallback((updated: Conversation[]) => {
     if (!memoryOnly.current) {
       let stored = JSON.stringify(updated);
       while (stored.length > MAX_STORAGE_CHARS && updated.length > 1) {
@@ -147,5 +143,42 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
     setConversations(updated);
   }, []);
 
-  return <ChatHistoryContext.Provider value={{ready, conversations, save}}>{children}</ChatHistoryContext.Provider>;
+  const save = useCallback((chat: Conversation, update?: 'messages' | 'summary') => {
+    if (removedChats.current.has(chat.id)) return;
+    const validated = conversation.safeParse({
+      ...chat,
+      messages: recentMessages(chat.messages),
+    });
+    if (!validated.success || (!validated.data.messages.length && !validated.data.comparison)) return;
+    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
+    const previous = current.find(item => item.id === chat.id);
+    const next = validated.data;
+    next.pinned = previous?.pinned;
+    if (next.comparison && previous?.comparison) {
+      if (update === 'summary') next.messages = previous.messages;
+      if (update === 'messages') next.comparison.summary = previous.comparison.summary;
+      else next.comparison.summary ??= previous.comparison.summary;
+    }
+    if (JSON.stringify(previous) === JSON.stringify(next)) return;
+    const updated = [next, ...current.filter(item => item.id !== chat.id)]
+      .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)))
+      .slice(0, MAX_CHATS);
+    writeHistory(updated);
+  }, [writeHistory]);
+
+  const togglePin = useCallback((id: string) => {
+    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
+    const chat = current.find(chat => chat.id === id);
+    if (!chat || chat.comparison) return;
+    writeHistory(current.map(item => item.id === id ? {...item, pinned: !item.pinned} : item));
+  }, [writeHistory]);
+
+  const removeChat = useCallback((id: string) => {
+    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
+    if (!current.some(chat => chat.id === id && !chat.comparison)) return;
+    removedChats.current.add(id);
+    writeHistory(current.filter(chat => chat.id !== id));
+  }, [writeHistory]);
+
+  return <ChatHistoryContext.Provider value={{ready, conversations, save, togglePin, removeChat}}>{children}</ChatHistoryContext.Provider>;
 }
