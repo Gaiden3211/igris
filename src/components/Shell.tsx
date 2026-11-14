@@ -186,7 +186,7 @@ export function Shell({children}: {children: ReactNode}) {
         </div>
       </dialog>
 
-      <dialog ref={deleteDialog} className="igris-dialog" aria-labelledby="igris-delete-title"
+      <dialog ref={deleteDialog} className="igris-dialog" aria-labelledby="igris-delete-title" aria-describedby="igris-delete-chat-name"
         onClose={() => setChatToDelete(null)}>
         <form className="igris-dialog-content" onSubmit={event => {
           event.preventDefault();
@@ -200,8 +200,9 @@ export function Shell({children}: {children: ReactNode}) {
           }
         }}>
           <h2 id="igris-delete-title">{t.deleteChat}</h2>
-          <p>{t.deleteChatPrompt}</p>
-          {chatToDelete && <p className="igris-delete-title">{conversationTitle(chatToDelete)}</p>}
+          {chatToDelete && (
+            <p id="igris-delete-chat-name" className="igris-delete-title">{conversationTitle(chatToDelete) || t.navChat}</p>
+          )}
           <div className="igris-delete-actions">
             <button type="button" autoFocus className="igris-nav-link" onClick={() => deleteDialog.current?.close()}>{t.cancel}</button>
             <button type="submit" className="igris-delete-button">{t.deleteChat}</button>

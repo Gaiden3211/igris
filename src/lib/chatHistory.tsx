@@ -79,11 +79,24 @@ function recentMessages(messages: ChatMsg[]) {
   return [turns[0], ...turns.slice(-(MAX_MESSAGES - 1))];
 }
 
-export const conversationTitle = ({messages, comparison}: Conversation) => {
+const TITLE_WORDS = 6;
+const TITLE_LENGTH = 42;
+const titleIntro = /^(?:(?:hey|hi|hello|привіт|вітаю)[!,.\s]+|(?:please|будь ласка)[,\s]+|(?:could you|can you|would you|можеш|можете|чи можеш|чи можете)[\s]+|(?:tell me about|tell me|find information about|find me|find|explain|show me|розкажи мені про|розкажіть мені про|розкажи про|розкажіть про|поясни|поясніть|знайди інформацію про|знайдіть інформацію про|знайди|знайдіть)[\s]+)+/iu;
+
+export function conversationTitle({messages, comparison}: Conversation) {
   if (comparison) return comparison.names.join(' · ');
 
-  return (messages.find(m => m.role === 'user')?.content ?? '').replace(/\s+/g, ' ').trim().slice(0, 100);
-};
+  const firstMessage = (messages.find(m => m.role === 'user')?.content ?? '').replace(/\s+/g, ' ').trim();
+  const topic = (firstMessage.replace(titleIntro, '').trim() || firstMessage).replace(/[?!.…]+$/u, '') || firstMessage;
+  const words = topic.split(' ');
+  const title = words.slice(0, TITLE_WORDS).join(' ');
+  if (words.length <= TITLE_WORDS && Array.from(title).length <= TITLE_LENGTH) return title;
+
+  const prefix = Array.from(title).slice(0, TITLE_LENGTH - 1).join('');
+  const lastSpace = prefix.lastIndexOf(' ');
+  const withinWord = !/^(?:\s|$)/u.test(title.slice(prefix.length));
+  return (withinWord && lastSpace > 0 ? prefix.slice(0, lastSpace) : prefix).trimEnd() + '…';
+}
 
 const ChatHistoryContext = createContext<{
   ready: boolean;
