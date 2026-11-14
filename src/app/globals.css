@@ -33,6 +33,7 @@ html, body { height: 100%; }
 .igris-shell {
   --igris-bg: light-dark(#fff, #212121);
   --igris-sidebar-bg: light-dark(#f8f8f8, #171717);
+  --igris-chart-fill: color-mix(in srgb, var(--color-text-primary) 75%, var(--igris-hover));
   --igris-hover: light-dark(#ebebeb, #2d2d2d);
   display: flex;
   height: 100dvh;
@@ -107,7 +108,7 @@ html, body { height: 100%; }
 .igris-chart-categories li a { overflow-wrap: anywhere; }
 .igris-chart-count { text-align: end; font-variant-numeric: tabular-nums; }
 .igris-chart-bar { display: block; height: 8px; background: var(--igris-hover); border-radius: 6px; }
-.igris-chart-bar > span { display: block; height: 100%; background: var(--color-text-primary); border-radius: inherit; opacity: .75; }
+.igris-chart-bar > span { display: block; height: 100%; background: var(--igris-chart-fill); border-radius: inherit; }
 .igris-scenarios dl { display: grid; gap: 12px; margin-top: 12px; }
 .igris-scenarios dt { font-weight: 600; }
 .igris-scenarios dd { color: var(--color-text-secondary); margin: 4px 0 0; }

@@ -85,7 +85,7 @@ export default function AnalyticsPage() {
                     title={t.chartByYear}
                     data={a.byYear}
                     xKey="label"
-                    series={[bar('count', {label: t.count})]}
+                    series={[bar('count', {label: t.count, color: 'var(--igris-chart-fill)'})]}
                     height={240}
                     yDomain={[0, Math.max(1, ...a.byYear.map(item => item.count))]}
                     grid={<ChartGrid horizontal />}

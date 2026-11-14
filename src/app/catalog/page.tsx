@@ -106,7 +106,7 @@ export default function CatalogPage() {
     ...selectionPlugin,
     transformColumns(columns: TableColumn<InvestigationRow>[]) {
       const [checkbox, ...rest] = selectionPlugin.transformColumns?.(columns) ?? columns;
-      return checkbox ? [{...checkbox, header: null}, ...rest] : rest;
+      return checkbox ? [{...checkbox, header: ''}, ...rest] : rest;
     },
   };
   const unselect = (id: string) =>
