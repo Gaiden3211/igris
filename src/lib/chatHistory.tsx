@@ -12,7 +12,6 @@ const MAX_STORAGE_CHARS = 1_500_000;
 
 export interface Conversation {
   id: string;
-  domain: string;
   focus: ChatFocus | null;
   messages: ChatMsg[];
 }
@@ -41,7 +40,6 @@ const message = z.object({
 }).transform(turn => ({...turn, steps: [] as ChatMsg['steps']}));
 const conversation = z.object({
   id: z.uuid(),
-  domain: z.string().max(128),
   focus: z.object({ids: z.array(z.string().regex(/^PSI-\d+$/)).max(4), names: z.array(z.string()).max(4)}).nullable(),
   messages: z.array(message).max(MAX_MESSAGES),
 });

@@ -3,7 +3,7 @@
 
 export const PLANNER_PROMPT = `You plan database searches for Igris, a research assistant over space-agency microgravity investigations.
 Return ONLY a JSON object, no prose, no code fences:
-{"language":"en"|"uk","intent":"search"|"detail"|"compare"|"smalltalk"|"off_topic","queries":["..."],"ids":["PSI-25"]}
+{"language":"en"|"uk","intent":"search"|"detail"|"compare"|"smalltalk"|"off_topic","queries":["..."],"ids":["PSI-25"],"domain":null}
 
 Rules:
 - "language": the language the user wrote in (Ukrainian or Russian -> "uk", otherwise "en").
@@ -13,6 +13,8 @@ Rules:
   Include common abbreviations and synonyms next to the full term (e.g. "CO2 carbon dioxide", "He helium",
   "suppressant suppression extinguishment"). Leave out words true of every record here, such as microgravity,
   space, ISS, experiment, investigation.
+- "domain": the exact id from the supplied research areas if the question clearly belongs to one area.
+  Return null for ambiguous, cross-area or general questions. Never invent a domain id.
 - "ids": investigation accessions or acronyms the user named explicitly (e.g. "PSI-25", "BASS-II", "Saffire"). Otherwise [].
 - "intent": "compare" when two or more investigations are contrasted; "detail" for one named investigation;
   "smalltalk" for greetings or questions about the assistant; "off_topic" for anything unrelated to science data.

@@ -36,22 +36,27 @@ async function resolveIds(names: string[]): Promise<string[]> {
 }
 
 /** Skills: search_investigations + search_passages + get_investigation, merged into one cited context. */
-export async function retrieve(queries: string[], namedIds: string[], domain: string | null): Promise<Retrieved> {
+export async function retrieve(queries: string[], namedIds: string[], domain: string | null, broaden = false): Promise<Retrieved> {
   const ids = new Set<string>(await resolveIds(namedIds));
   const passages = new Map<number, {investigation_id: string | null; section: string; content: string; source_url: string}>();
 
-  for (const q of queries.slice(0, 3)) {
-    const [inv, chunks] = await Promise.all([
-      // any_terms: plan queries are keyword lists, so a record matching most of them should still be found.
-      db().rpc('search_investigations', {q, domain, lim: 6, any_terms: true}),
-      db().rpc('search_chunks', {q, domain, lim: 8, any_terms: true}),
-    ]);
-    inv.data?.forEach((r: {id: string}) => ids.add(r.id));
-    chunks.data?.forEach((c: {id: number; investigation_id: string | null; section: string; content: string; source_url: string}) =>
-      passages.set(c.id, c),
-    );
+  async function search(searchDomain: string | null) {
+    for (const q of queries.slice(0, 3)) {
+      const [inv, chunks] = await Promise.all([
+        // any_terms: a record matching most of the planner's keywords can still be found.
+        db().rpc('search_investigations', {q, domain: searchDomain, lim: 6, any_terms: true}),
+        db().rpc('search_chunks', {q, domain: searchDomain, lim: 8, any_terms: true}),
+      ]);
+      inv.data?.forEach((r: {id: string}) => ids.add(r.id));
+      chunks.data?.forEach((c: {id: number; investigation_id: string | null; section: string; content: string; source_url: string}) =>
+        passages.set(c.id, c),
+      );
+    }
+    passages.forEach(p => p.investigation_id && ids.add(p.investigation_id));
   }
-  passages.forEach(p => p.investigation_id && ids.add(p.investigation_id));
+
+  await search(domain);
+  if (broaden && domain && ids.size === 0) await search(null);
 
   return buildContext([...ids].slice(0, 8), {maxAbstracts: 6});
 }

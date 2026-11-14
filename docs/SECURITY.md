@@ -10,7 +10,7 @@
 | Limit | Default | Variable |
 |---|---|---|
 | Messages per visitor per minute | 5 | `LIMIT_PER_MINUTE` |
-| Messages per visitor per day | 30 | `LIMIT_PER_DAY` |
+| Messages per visitor per day | 50 | `LIMIT_PER_DAY` |
 | Messages per network address per day | 90 | `LIMIT_PER_IP_DAY` |
 | Messages for all visitors per day | 600 | `LIMIT_GLOBAL_PER_DAY` |
 | Question length | 2,000 characters | `LIMIT_INPUT_CHARS` |
@@ -28,7 +28,7 @@ A random id in an `HttpOnly` cookie, a salted SHA-256 hash of the network addres
 - All database access uses the Supabase client's parameterized queries.
 - Security headers: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`.
 - Prompt injection: retrieved text and user text are treated as data by the prompt, and the model has no tools, no network access and no secrets in its context.
-- Model failures fall back to the backup key; errors shown to users carry no internal details.
+- The backup key is tried when the primary fails before visible answer text. An interrupted partial answer is not restarted. Errors shown to users carry no internal details.
 
 ## Known gaps
 

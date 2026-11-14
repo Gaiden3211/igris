@@ -8,7 +8,7 @@ The server runs these for the model; the model never queries anything itself.
 
 | Skill | Implementation | Purpose |
 |---|---|---|
-| Plan | `PLANNER_PROMPT`, one short call | Detect language and intent; produce 1–3 English search queries; extract named investigations |
+| Plan | `PLANNER_PROMPT`, one short call | Detect language, intent and research area; produce 1–3 English search queries; extract named investigations |
 | Resolve names | `resolveIds` | Map "BASS-II" or "PSI-25" to records |
 | Search investigations | SQL `search_investigations` | Ranked full-text search over titles, objectives, approaches |
 | Search passages | SQL `search_chunks` | Ranked full-text search over objectives and paper abstracts |
@@ -28,7 +28,7 @@ The server runs these for the model; the model never queries anything itself.
 
 Input at most 2,000 characters, the last 8 turns of history, answer at most 1,200 tokens, temperature 0–0.2. Context is capped at 8 investigations and 6 abstracts.
 
-Radium models reason before they answer, and those hidden tokens count against `max_tokens`. Every call therefore gets an extra `LIMIT_REASONING_TOKENS` (default 2,000); it is only a ceiling, unused tokens are not billed. If a model still returns no visible text, the user gets an error instead of an empty answer.
+Radium models reason before they answer, and those hidden tokens count against `max_tokens`. Every call therefore gets an extra `LIMIT_REASONING_TOKENS` (default 2,000); it is only a ceiling, unused tokens are not billed. If the primary model call fails or produces no visible text, the backup key is tried when configured. An interrupted partial answer is left visible with an error.
 
 Model choice (tested 2026-11-14 on a 3-investigation comparison and a Ukrainian search plan):
 

@@ -5,6 +5,7 @@ import {json, meteredStream, openMetered, pipeAnswer} from '@/lib/metered';
 import {complete, stream} from '@/lib/llm';
 import {ANSWER_PROMPT, PLANNER_PROMPT, SMALLTALK_HINT} from '@/lib/agent/prompt';
 import {retrieve} from '@/lib/agent/retrieve';
+import {db} from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,7 @@ const Plan = z.object({
   intent: z.enum(['search', 'detail', 'compare', 'smalltalk', 'off_topic']).catch('search'),
   queries: z.array(z.string().max(120)).max(3).catch([]),
   ids: z.array(z.string().max(40)).max(6).catch([]),
+  domain: z.string().max(64).nullable().catch(null),
 });
 
 export async function POST(req: NextRequest) {
@@ -42,9 +44,17 @@ export async function POST(req: NextRequest) {
   return meteredStream(metered, async (send, usage) => {
     // Step 1: plan the search (one small, non-streamed call).
     send({type: 'step', id: 'plan', status: 'running'});
+    const domains = domain || focus.length > 0
+      ? []
+      : (await db().from('domains').select('id,name').eq('enabled', true)).data ?? [];
     const planned = await complete(
       [
-        {role: 'system', content: PLANNER_PROMPT},
+        {role: 'system', content: `${PLANNER_PROMPT}
+
+Available research areas: ${JSON.stringify(domains)}`},
+        ...history.filter(turn => turn.role === 'user').slice(-2).map(turn => ({
+          role: 'user' as const, content: `Earlier question for context only: ${turn.content}`,
+        })),
         {role: 'user', content: message},
       ],
       200,
@@ -74,7 +84,9 @@ export async function POST(req: NextRequest) {
     if (plan.intent !== 'smalltalk' && plan.intent !== 'off_topic') {
       send({type: 'step', id: 'search', status: 'running'});
       // Focus ids first so they are never pushed out of the 8-record context by search hits.
-      const found = await retrieve(plan.queries, [...focus, ...plan.ids], domain);
+      const detectedDomain = domains.some(area => area.id === plan.domain) ? plan.domain : null;
+      const named = [...focus, ...plan.ids];
+      const found = await retrieve(plan.queries, named, domain ?? detectedDomain, !domain);
       context = found.context;
       send({type: 'step', id: 'search', status: 'complete', detail: String(found.cards.length)});
       send({type: 'sources', cards: found.cards});

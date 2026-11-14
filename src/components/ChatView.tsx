@@ -10,7 +10,6 @@ import {useSettings} from '@/app/providers';
 import {useChat, type ChatMsg} from '@/lib/useChat';
 import {takeChatSeed, type ChatFocus} from '@/lib/chatSeed';
 import {useChatHistory, type Conversation} from '@/lib/chatHistory';
-import {useApi} from '@/lib/useApi';
 import {ChatTurns} from '@/components/ChatTurns';
 
 const CHAT_ID = /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
@@ -46,7 +45,6 @@ export function ChatView() {
       question,
       initial: seed ? {
         id: newId,
-        domain: '',
         focus: seed.focus,
         messages: seed.messages.map(message => ({...message, steps: []})),
       } : undefined,
@@ -74,16 +72,14 @@ function ChatSession({id, initial, question, imported}: {
 }) {
   const {t} = useSettings();
   const {save} = useChatHistory();
-  const [domain, setDomain] = useState(initial?.domain ?? '');
   const [focus, setFocus] = useState<ChatFocus | null>(initial?.focus ?? null);
   const changed = useRef(imported);
   const seededQuestionSent = useRef(false);
-  const meta = useApi<{domains: {id: string; name: string}[]}>('/api/meta');
 
   const persist = useCallback((messages: ChatMsg[]) => {
     if (!messages.some(m => m.content || m.error)) return;
-    save({id, messages, domain, focus});
-  }, [id, domain, focus, save]);
+    save({id, messages, focus});
+  }, [id, focus, save]);
 
   const onQuestion = useCallback((messages: ChatMsg[]) => {
     changed.current = true;
@@ -94,7 +90,7 @@ function ChatSession({id, initial, question, imported}: {
   }, [id, persist]);
 
   const {messages, busy, quota, notice, send, stop} = useChat({
-    initialMessages: initial?.messages, focus: focus?.ids, domain, onQuestion,
+    initialMessages: initial?.messages, focus: focus?.ids, onQuestion,
   });
 
   useEffect(() => {
@@ -117,15 +113,6 @@ function ChatSession({id, initial, question, imported}: {
       isStopShown={busy}
       placeholder={t.chatPlaceholder}
       status={notice ? {type: 'warning', message: notice} : undefined}
-      footerActions={(meta.data?.domains.length || domain) ? (
-        <label className="igris-chat-area">
-          <span>{t.area}</span>
-          <select value={domain} disabled={busy} onChange={event => { changed.current = true; setDomain(event.target.value); }}>
-            <option value="">{t.allAreas}</option>
-            {meta.data?.domains.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-          </select>
-        </label>
-      ) : undefined}
       headerContext={quota ? (
         <Text type="supporting" color="secondary">{t.remaining(quota.left, quota.perDay)}</Text>
       ) : undefined}

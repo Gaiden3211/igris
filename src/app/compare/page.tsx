@@ -11,6 +11,7 @@ import {Markdown} from '@astryxdesign/core/Markdown';
 import {ChatComposer, ChatToolCalls} from '@astryxdesign/core/Chat';
 import {Table, pixel, proportional, type TableColumn} from '@astryxdesign/core/Table';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
+import {DEFAULT_DAILY_LIMIT} from '@/lib/quota';
 import {useSettings} from '@/app/providers';
 import {PageHeader} from '@/components/PageHeader';
 import {SourceCards} from '@/components/SourceCards';
@@ -96,7 +97,7 @@ export default function ComparePage() {
       });
       if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
-        if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? 30});
+        if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? DEFAULT_DAILY_LIMIT});
         setError(res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel);
         return;
       }

@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {useSettings} from '@/app/providers';
+import {DEFAULT_DAILY_LIMIT} from './quota';
 import type {Dict} from './i18n';
 import {readNdjson, type SourceCardData} from './citations';
 
@@ -32,10 +33,9 @@ const HISTORY_TURNS = 8; // the server accepts at most 8
  * @param focus  investigation ids the server always retrieves (a conversation about a comparison)
  * @param prefix earlier turns that are not shown in `messages` but belong to the conversation (the comparison itself)
  */
-export function useChat({focus, prefix = [], domain, initialMessages, onQuestion}: {
+export function useChat({focus, prefix = [], initialMessages, onQuestion}: {
   focus?: string[] | null;
   prefix?: HistoryItem[];
-  domain?: string;
   initialMessages?: ChatMsg[];
   onQuestion?: (messages: ChatMsg[]) => void;
 } = {}) {
@@ -69,13 +69,13 @@ export function useChat({focus, prefix = [], domain, initialMessages, onQuestion
         const res = await fetch('/api/chat', {
           method: 'POST',
           headers: {'content-type': 'application/json'},
-          body: JSON.stringify({message, history, domain: domain || null, focus: focus && focus.length ? focus : undefined}),
+          body: JSON.stringify({message, history, focus: focus && focus.length ? focus : undefined}),
           signal: ctrl.signal,
         });
         if (!res.ok || !res.body) {
           const body = await res.json().catch(() => ({}));
           const text = res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel;
-          if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? 30});
+          if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? DEFAULT_DAILY_LIMIT});
           if (onQuestion) patchLast(m => ({...m, error: text}));
           else {
             setMessages(list => list.slice(0, -2));
@@ -99,7 +99,7 @@ export function useChat({focus, prefix = [], domain, initialMessages, onQuestion
         abort.current = null;
       }
     },
-    [messages, domain, focus, prefix, onQuestion, t],
+    [messages, focus, prefix, onQuestion, t],
   );
 
   const stop = () => abort.current?.abort();

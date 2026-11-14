@@ -1,3 +1,5 @@
+import {DEFAULT_DAILY_LIMIT} from './quota';
+
 // Central, typed access to server-side configuration. Never import this from client components.
 const num = (v: string | undefined, d: number) => {
   const n = Number(v);
@@ -9,14 +11,15 @@ export const env = {
   supabaseSecretKey: process.env.SUPABASE_SECRET_KEY ?? '',
   radiumBaseUrl: process.env.RADIUM_BASE_URL ?? 'https://api.radium.cloud/v1',
   radiumModel: process.env.RADIUM_MODEL ?? 'tycho-1.0',
-  radiumKeys: [process.env.RADIUM_API_KEY, process.env.RADIUM_API_KEY_BACKUP].filter(
-    (k): k is string => Boolean(k),
-  ),
+  radiumKeys: {
+    primary: process.env.RADIUM_API_KEY?.trim(),
+    backup: process.env.RADIUM_API_KEY_BACKUP?.trim(),
+  },
   ipHashSalt: process.env.IP_HASH_SALT ?? 'igris-dev-salt',
   publicUrl: process.env.RENDER_EXTERNAL_URL ?? process.env.PUBLIC_URL ?? '',
   limits: {
     perMinute: num(process.env.LIMIT_PER_MINUTE, 5),
-    perDay: num(process.env.LIMIT_PER_DAY, 30),
+    perDay: num(process.env.LIMIT_PER_DAY, DEFAULT_DAILY_LIMIT),
     perIpDay: num(process.env.LIMIT_PER_IP_DAY, 90),
     globalPerDay: num(process.env.LIMIT_GLOBAL_PER_DAY, 600),
     maxInputChars: num(process.env.LIMIT_INPUT_CHARS, 2000),
@@ -31,4 +34,4 @@ export const env = {
 };
 
 export const isDbConfigured = () => Boolean(env.supabaseUrl && env.supabaseSecretKey);
-export const isLlmConfigured = () => env.radiumKeys.length > 0;
+export const isLlmConfigured = () => Boolean(env.radiumKeys.primary || env.radiumKeys.backup);
