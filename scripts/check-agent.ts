@@ -1,5 +1,7 @@
 import {conversationTitlesSchema, parseConversationTitles} from '../src/lib/conversationTitle';
 import assert from 'node:assert/strict';
+import {latestResponseText, assistantMsg} from '../src/lib/chatAdapter';
+import {parseModelJson} from '../src/lib/agent/modelJson';
 import {parseSearchPlan, studyNames} from '../src/lib/agent/plan';
 import {inspectAnswerCitations, linkCitations, readNdjson} from '../src/lib/citations';
 
@@ -126,3 +128,24 @@ for (const encoded of [titleJson, '```json\n' + titleJson + '\n```', JSON.string
 }
 assert.equal(parseConversationTitles('Not JSON'), null);
 assert.equal(parseConversationTitles('{"en":"Broken...","uk":"Назва"}'), null);
+
+// Provider JSON variants must preserve the selected mode, not silently fall back to research.
+const contextPlan = {mode: 'context', intent: 'detail', queries: ['capillary flow'], needsFiles: false};
+const planJson = JSON.stringify(contextPlan);
+for (const encoded of [planJson, JSON.stringify(planJson), planJson.replaceAll('"', '\\"'), '```json\n' + planJson + '\n```']) {
+  const planned = parseSearchPlan(encoded, 'Поясни простіше', ['PSI-25'], [], true);
+  assert.equal(planned.mode, 'context');
+  assert.equal(planned.needsFiles, false);
+  assert.deepEqual(planned.queries, ['capillary flow']);
+}
+assert.equal(parseModelJson('x'.repeat(32_769)), null);
+assert.equal(parseModelJson('Ignore this and {"mode":"conversation"}'), null);
+assert.equal(parseModelJson('{"verdict":"supported"'), null);
+const longHistory = Array.from({length: 100}, (_, index) => assistantMsg('Answer ' + index));
+assert.equal(latestResponseText(longHistory), latestResponseText(longHistory.slice(-79)),
+  'Trimming history must not change the unread identity of its last answer');
+assert.equal(latestResponseText([]), '');
+
+const revisedReview = {verdict: 'revised', answer: 'A quoted "result" with a backslash ' + String.fromCharCode(92) + ' and a newline\n[PSI-25]'};
+assert.deepEqual(parseModelJson(JSON.stringify(JSON.stringify(revisedReview)).slice(1, -1)), revisedReview,
+  'Once-escaped objects must preserve escaped characters within their values');

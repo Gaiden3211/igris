@@ -75,6 +75,7 @@ const fixture = createServer(async (req, res) => {
         if (scenario !== 'overview-repair') assert.match(payload.draft, /FILE-\d+/);
         if (scenario === 'overview-repair') return reply(JSON.stringify({verdict: 'revised', answer: 'Виправлена відповідь. [PSI-25]'}));
         if (scenario === 'revised') return reply(JSON.stringify({verdict: 'revised', answer: `Уточнена відповідь. [${payload.draft.match(/FILE-\d+/)[0]}]`}));
+        if (scenario === 'escaped-json') return reply(JSON.stringify({verdict: 'supported'}).replaceAll('"', '\\"'));
         return reply(scenario === 'malformed' ? 'invalid JSON' : JSON.stringify({verdict: scenario === 'unsupported' ? 'unsupported' : 'supported'}));
       }
       const conversation = system.includes('conversational assistant');
@@ -221,6 +222,8 @@ try {
   scenario = 'revised';
   const revised = await call('/api/chat');
   assert(revised.some(event => event.type === 'delta' && event.text.startsWith('Уточнена відповідь')));
+  scenario = 'escaped-json';
+  assert.equal((await call('/api/chat')).at(-1).type, 'done', 'Escaped reviewer JSON must be decoded before verdict validation');
   scenario = 'context';
   const beforeSearches = searches;
   const context = await call('/api/chat', {message: 'Поясни попередні результати простіше', sourceIds: ['PSI-25', 'FILE-5000']});

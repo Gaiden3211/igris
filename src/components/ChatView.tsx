@@ -9,7 +9,7 @@ import {Heading, Text} from '@astryxdesign/core/Text';
 import {HStack} from '@astryxdesign/core/Layout';
 import {useSettings} from '@/app/providers';
 import {useChat, useChatRuntime} from '@/lib/useChat';
-import type {ChatMsg, ChatRepository} from '@/lib/chatAdapter';
+import {latestResponseText, type ChatMsg, type ChatRepository} from '@/lib/chatAdapter';
 import {takeChatSeed, type ChatFocus} from '@/lib/chatSeed';
 import {useChatHistory, type Conversation} from '@/lib/chatHistory';
 import {exportRepository} from '@/lib/chatRepository';
@@ -132,7 +132,7 @@ function ChatSessionContent({id, runtime, repository, question, focus, persist, 
   const seededQuestionSent = useRef(false);
   const {ready, messages, busy, send, stop} = useChat(runtime, repository);
 
-  const viewed = useConversationActivity(id, busy, messages.filter(m => m.role === 'assistant').map(m => m.content + (m.error ?? '')).join('\n'));
+  const viewed = useConversationActivity(id, busy, latestResponseText(messages));
 
   useEffect(() => {
     if (!ready || !question || seededQuestionSent.current) return;

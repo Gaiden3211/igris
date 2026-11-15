@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {parseModelJson} from './modelJson';
 
 const Plan = z.object({
   mode: z.enum(['conversation', 'context', 'search']).optional().catch(undefined),
@@ -25,13 +26,7 @@ export function studyNames(names: string[]): string[] {
 
 /** Model output proposes a plan; server-side rules control its bounds and exact references. */
 export function parseSearchPlan(text: string, message: string, focus: string[] = [], domains: string[] = [], hasContext = false) {
-  let value: unknown;
-  try {
-    value = JSON.parse(text.trim().replace(/^```(?:json)?\s*([\s\S]*?)\s*```$/i, '$1'));
-  } catch {
-    value = {};
-  }
-  const parsed = Plan.safeParse(value);
+  const parsed = Plan.safeParse(parseModelJson(text));
   const plan = parsed.success ? parsed.data : Plan.parse({});
   const accessions = normalizeStudyName(message).match(/\bPSI-\d{1,6}\b/g) ?? [];
   const conversational = !accessions.length && (plan.mode === 'conversation' || plan.intent === 'smalltalk' || plan.intent === 'off_topic');

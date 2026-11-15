@@ -22,7 +22,7 @@ import {exportRepository} from '@/lib/chatRepository';
 import {ChatTurns} from '@/components/ChatTurns';
 import {MessageActions} from '@/components/MessageActions';
 import {useChat, useChatRuntime} from '@/lib/useChat';
-import {assistantMsg, chatEventSchema, limitText, type ChatMsg, type ChatStep, type HistoryItem} from '@/lib/chatAdapter';
+import {assistantMsg, chatEventSchema, limitText, latestResponseText, type ChatMsg, type ChatStep, type HistoryItem} from '@/lib/chatAdapter';
 import {linkCitations, ndjsonEvents, type SourceCardData} from '@/lib/citations';
 import {comparisonIds, comparisonKey} from '@/lib/compare';
 import {useChatHistory, type Conversation} from '@/lib/chatHistory';
@@ -320,7 +320,7 @@ function ComparisonFollowUpContent({id, ids, names, summary, saved, visible, run
   const {t} = useSettings();
   const {save} = useChatHistory();
   const followUp = useChat(runtime, saved?.repository);
-  const viewed = useConversationActivity(id, followUp.busy, followUp.messages.filter(m => m.role === 'assistant').map(m => m.content + (m.error ?? '')).join('\n'));
+  const viewed = useConversationActivity(id, followUp.busy, latestResponseText(followUp.messages));
   const lastSaved = useRef<typeof followUp.messages | null>(null);
 
   useEffect(() => {

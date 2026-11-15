@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {parseModelJson} from './modelJson';
 import {complete, type stream} from '../llm';
 import {collectAnswer, UnverifiedAnswer, type Send, type Usage} from '../metered';
 import type {Retrieved} from './retrieve';
@@ -30,7 +31,7 @@ async function verifyAnswer(text: string, found: Retrieved, question: string, us
   usage.tokensOut += review.tokensOut;
   const reviewText = review.text.trim().replace(/^<think>[\s\S]*?<\/think>\s*/i, '');
   const fencedReview = reviewText.match(/```(?:json)?\s*([\s\S]*?)\s*```/i)?.[1];
-  const parsed = Verdict.safeParse(parseJson(reviewText) ?? (fencedReview ? parseJson(fencedReview) : null));
+  const parsed = Verdict.safeParse(parseModelJson(reviewText) ?? (fencedReview ? parseModelJson(fencedReview) : null));
   if (!parsed.success) throw new Error('invalid reviewer response');
   if (parsed.data.verdict === 'revised' && parsed.data.answer) {
     const revised = stripCitationDestinations(parsed.data.answer);
@@ -40,14 +41,6 @@ async function verifyAnswer(text: string, found: Retrieved, question: string, us
   if (citations.valid && (parsed.data.verdict === 'no_claims'
     || (parsed.data.verdict === 'supported' && citations.ids.length > 0 && Boolean(found.context)))) return text;
   throw new UnverifiedAnswer(citations.valid ? 'review_rejected' : 'invalid_draft_citations');
-}
-
-function parseJson(text: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    return null;
-  }
 }
 
 export async function sendVerifiedAnswer(

@@ -29,3 +29,18 @@ Passed:
 ## Limits of this pass
 
 The current `.env.local` targets a local Supabase endpoint at `127.0.0.1:54321`, which was not running. Live-database synchronization attempts therefore failed before reading or changing research records; this review did not reverify or mutate the hosted database. Its settings were left untouched. API verification used deterministic local fixtures, not a live model or a real scientific-accuracy evaluation. No deployment was performed.
+
+## Follow-up review: chat sessions and model responses
+
+Reviewed the complete `295749f` change set, including assistant-ui sessions, sidebar actions, saved comparisons, metadata titles, NASA retrieval, source citations and ingestion boundaries.
+
+Corrections:
+
+- Plan, verdict and title parsing now share a bounded JSON decoder for ordinary, fenced, JSON-string-wrapped and once-escaped provider responses. Escaped quotes inside revised answers are preserved. Each caller still validates its own schema; malformed output is rejected or uses the existing search fallback.
+- Unread response identity uses the last assistant response instead of concatenating the entire history, so trimming old messages does not change the identity after reload.
+- Reimport retains bibliography entries without abstracts and retains repaired metadata even without a saved abstract. Only actual abstracts become evidence passages; title-only entries remain explicitly labeled as such during retrieval.
+- Sidebar actions use keyboard-visible focus rather than all focus, so a pointer click no longer leaves pin and menu buttons visible after the pointer leaves.
+- A scoped npm override upgrades only the ESLint parser's nested `minimatch` to `11.0.1` for GHSA-g3hv-75wg-m249. Remove the override when the upstream parser requires a patched version itself. Both production and development dependency audits report zero known vulnerabilities after this change.
+- File-index documentation now matches the current UI and supported download formats.
+
+Validation includes parser/ingestion regressions, an escaped-verdict production-API fixture, all 34 reference snapshots and 1,018 file excerpts, mounted chat/branch/background-session/title persistence checks, TypeScript, ESLint, production build, script syntax and a scan of tracked files for credential patterns. The live local investigation endpoint was read successfully without mutating the database. No ingestion, schema migration, deployment or remote push was performed in this follow-up.

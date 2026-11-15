@@ -47,6 +47,12 @@ export type ChatStep = z.infer<typeof stepSchema>;
 export type ChatMsg = z.infer<typeof metadataSchema> & {role: 'user' | 'assistant'; content: string};
 export type HistoryItem = Pick<ChatMsg, 'role' | 'content'>;
 export const assistantMsg = (content: string, cards: SourceCardData[] = []): ChatMsg => ({role: 'assistant', content, steps: [], cards});
+/** Stable across history trimming and restored message branches. */
+export function latestResponseText(messages: ChatMsg[]) {
+  const answer = messages.findLast(message => message.role === 'assistant');
+  return answer ? answer.content + (answer.error ?? '') : '';
+}
+
 export const limitText = (t: Dict, code?: string) => code === 'minute' ? t.limitMinute : code === 'global' ? t.limitGlobal : t.limitDay;
 export const messageText = (message: Pick<ThreadMessage, 'content'>) => message.content.map(part => part.type === 'text' ? part.text : '').join('');
 export function fromRuntimeMessage(message: ThreadMessage): ChatMsg {

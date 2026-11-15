@@ -15,7 +15,7 @@ export const publicationKey = (paper: Pick<Publication, 'source' | 'title'>) => 
 
 /** Keep audited bibliographic repairs when a publisher supplies only a title on reimport. */
 export function mergePublications<T extends Publication>(candidates: T[], existing: VerifiedPublication[]) {
-  const verified = new Map(existing.filter(paper => paper.abstract?.trim()).map(paper => [normalizeTitle(paper.title), paper]));
+  const verified = new Map(existing.filter(paper => paper.title.trim()).map(paper => [normalizeTitle(paper.title), paper]));
   return [...new Map(candidates.map(paper => [publicationKey(paper), paper])).values()]
     .map(paper => {
       const saved = verified.get(normalizeTitle(paper.title));
@@ -28,5 +28,6 @@ export function mergePublications<T extends Publication>(candidates: T[], existi
         authors: paper.authors || saved?.authors || null,
       };
     })
-    .filter(paper => Boolean(paper.url && paper.abstract?.trim()));
+    // Missing abstracts limit evidence coverage; they do not erase bibliography records.
+    .filter(paper => Boolean(paper.title.trim()));
 }

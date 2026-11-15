@@ -167,9 +167,9 @@ html, body { height: 100%; }
 .igris-delete-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
 .igris-delete-button { min-height: 44px; padding: 8px 14px; border-radius: 10px; background: #b42318; color: white; cursor: pointer; }
 @media (hover: hover) and (pointer: fine) {
-  .igris-history-row:is(:hover, :focus-within) .igris-history-actions,
+  .igris-history-row:is(:hover, :has(:focus-visible)) .igris-history-actions,
   .igris-history-row:has([aria-expanded="true"]) .igris-history-actions { display: flex; }
-  .igris-history-row:is(:hover, :focus-within) .igris-history-status,
+  .igris-history-row:is(:hover, :has(:focus-visible)) .igris-history-status,
   .igris-history-row:has([aria-expanded="true"]) .igris-history-status { display: none; }
   .igris-history-row:hover, .igris-history-row:has(:focus-visible) { background: var(--igris-hover); }
 }
