@@ -2,6 +2,7 @@ services:
   - type: web
     name: igris
     runtime: node
+    branch: igris_v2
     plan: free
     region: frankfurt
     buildCommand: npm ci && npm run build
@@ -16,11 +17,15 @@ services:
         sync: false
       - key: RADIUM_API_KEY
         sync: false
-      - key: RADIUM_API_KEY_BACKUP
-        sync: false
       - key: RADIUM_BASE_URL
         value: https://api.radium.cloud/v1
       - key: RADIUM_MODEL
-        value: tycho-1.0
+        value: clarke-1.0
+      - key: RADIUM_REASONING_EFFORT
+        value: low
+      - key: PUBLIC_RESEARCH_ENABLED
+        value: "true"
+      - key: LIMITS_ENABLED
+        value: "true"
       - key: IP_HASH_SALT
         generateValue: true
