@@ -6,7 +6,9 @@ import {createContext, useContext, useEffect, useRef, useState, type ReactNode} 
 import {
   Bars3Icon, ChartBarIcon, ChatBubbleLeftRightIcon, ChevronRightIcon, Cog6ToothIcon, PencilSquareIcon, Squares2X2Icon, XMarkIcon,
 } from '@heroicons/react/24/outline';
-import {conversationTitle, useChatHistory, type Conversation} from '@/lib/chatHistory';
+import {useChatHistory, type Conversation} from '@/lib/chatHistory';
+import {useConversationSessions} from './ConversationSessions';
+import {comparisonIds, comparisonKey} from '@/lib/compare';
 import {ChatHistoryRow} from './ChatHistoryRow';
 import {useSettings} from '@/app/providers';
 import type {Lang} from '@/lib/i18n';
@@ -45,18 +47,18 @@ function SettingsChoice<T extends string>({label, name, value, options, onChange
 export function Shell({children}: {children: ReactNode}) {
   const path = usePathname();
   const router = useRouter();
+  const sessions = useConversationSessions();
   const {conversations, togglePin, removeChat} = useChatHistory();
-  // Sort only the displayed list so unpinning restores the usual history order.
-  const chats = conversations
-    .filter(chat => !chat.comparison)
-    .sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
-  const comparisons = conversations.filter(chat => chat.comparison);
+  const byPin = (a: Conversation, b: Conversation) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned));
+  const chats = conversations.filter(chat => !chat.comparison).sort(byPin);
+  const comparisons = conversations.filter(chat => chat.comparison).sort(byPin);
   const {t, mode, lang, set, ready, welcomed, finishWelcome} = useSettings();
   const drawer = useRef<HTMLDialogElement>(null);
   const settings = useRef<HTMLDialogElement>(null);
   const welcome = useRef<HTMLDialogElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
+  const deleteLabel = chatToDelete?.comparison ? t.deleteComparison : t.deleteChat;
   const sourcesOrigin = useRef('');
   const openSettings = () => {
     if (path === '/sources' && sourcesOrigin.current) {
@@ -186,12 +188,15 @@ export function Shell({children}: {children: ReactNode}) {
         </div>
       </dialog>
 
-      <dialog ref={deleteDialog} className="igris-dialog" aria-labelledby="igris-delete-title" aria-describedby="igris-delete-chat-name"
+      <dialog ref={deleteDialog} className="igris-dialog" aria-labelledby="igris-delete-title"
         onClose={() => setChatToDelete(null)}>
         <form className="igris-dialog-content" onSubmit={event => {
           event.preventDefault();
           if (!chatToDelete) return;
-          const isActive = path === '/' && new URLSearchParams(window.location.search).get('chat') === chatToDelete.id;
+          const query = new URLSearchParams(window.location.search);
+          const isActive = (path === '/' && query.get('chat') === chatToDelete.id)
+            || (path === '/compare' && comparisonKey(comparisonIds(query.get('ids') ?? '')) === chatToDelete.id);
+          sessions?.remove(chatToDelete.id);
           removeChat(chatToDelete.id);
           deleteDialog.current?.close();
           if (isActive) {
@@ -199,13 +204,10 @@ export function Shell({children}: {children: ReactNode}) {
             router.replace('/');
           }
         }}>
-          <h2 id="igris-delete-title">{t.deleteChat}</h2>
-          {chatToDelete && (
-            <p id="igris-delete-chat-name" className="igris-delete-title">{conversationTitle(chatToDelete) || t.navChat}</p>
-          )}
+          <h2 id="igris-delete-title">{deleteLabel}?</h2>
           <div className="igris-delete-actions">
             <button type="button" autoFocus className="igris-nav-link" onClick={() => deleteDialog.current?.close()}>{t.cancel}</button>
-            <button type="submit" className="igris-delete-button">{t.deleteChat}</button>
+            <button type="submit" className="igris-delete-button">{deleteLabel}</button>
           </div>
         </form>
       </dialog>

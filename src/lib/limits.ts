@@ -5,8 +5,6 @@ export type LimitCode = 'minute' | 'day' | 'global';
 export interface LimitState {
   ok: boolean;
   code?: LimitCode;
-  remainingToday: number;
-  perDay: number;
 }
 
 async function countSince(column: 'visitor_id' | 'ip_hash' | null, value: string | null, since: Date) {
@@ -19,6 +17,7 @@ async function countSince(column: 'visitor_id' | 'ip_hash' | null, value: string
 
 /** Anonymous quota: per visitor cookie, per address (cookies can be cleared), and a global daily ceiling. */
 export async function checkLimits(visitorId: string, ipHash: string): Promise<LimitState> {
+  if (!env.limits.enabled) return {ok: true};
   const now = Date.now();
   const minuteAgo = new Date(now - 60_000);
   const dayAgo = new Date(now - 86_400_000);
@@ -33,10 +32,10 @@ export async function checkLimits(visitorId: string, ipHash: string): Promise<Li
   ]);
 
   const remainingToday = Math.max(0, Math.min(perDay - vDay, perIpDay - ipDay));
-  if (globalDay >= globalPerDay) return {ok: false, code: 'global', remainingToday, perDay};
-  if (remainingToday <= 0) return {ok: false, code: 'day', remainingToday: 0, perDay};
-  if (Math.max(vMinute, ipMinute) >= perMinute) return {ok: false, code: 'minute', remainingToday, perDay};
-  return {ok: true, remainingToday, perDay};
+  if (globalDay >= globalPerDay) return {ok: false, code: 'global'};
+  if (remainingToday <= 0) return {ok: false, code: 'day'};
+  if (Math.max(vMinute, ipMinute) >= perMinute) return {ok: false, code: 'minute'};
+  return {ok: true};
 }
 
 export async function recordUsage(e: {
@@ -54,5 +53,5 @@ export async function recordUsage(e: {
     key_slot: e.keySlot,
     tokens_in: e.tokensIn,
     tokens_out: e.tokensOut,
-  });
+  }).throwOnError();
 }

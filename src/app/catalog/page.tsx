@@ -66,6 +66,7 @@ export default function CatalogPage() {
   const [hardware, setHardware] = useState('');
   const [data, setData] = useState('');
   const [sort, setSort] = useState('');
+  const [filtersReady, setFiltersReady] = useState(false);
 
   // Deep links from Analytics and the assistant: /catalog?q=...&sub=...
   useEffect(() => {
@@ -75,13 +76,19 @@ export default function CatalogPage() {
     setSub(p.get('sub') ?? '');
     setHardware(p.get('hardware') ?? '');
     setData(p.get('data') ?? '');
+    setSort(p.get('sort') ?? '');
+    setFiltersReady(true);
   }, []);
 
-  const url = useMemo(() => {
-    const p = new URLSearchParams();
-    Object.entries({q, sub, hardware, data, sort}).forEach(([k, v]) => v && p.set(k, v));
-    return `/api/investigations?${p}`;
+  const filters = useMemo(() => {
+    const params = new URLSearchParams();
+    Object.entries({q, sub, hardware, data, sort}).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return params.toString();
   }, [q, sub, hardware, data, sort]);
+  useEffect(() => {
+    if (filtersReady) window.history.replaceState(window.history.state, '', filters ? `/catalog?${filters}` : '/catalog');
+  }, [filtersReady, filters]);
+  const url = `/api/investigations?${filters}`;
   const res = useApi<CatalogResponse>(url);
 
   // Selection for comparison: at most COMPARE_MAX rows.
@@ -123,6 +130,7 @@ export default function CatalogPage() {
   const dataLabel = (v: string) => (v === 'files' ? t.dataFiles : v === 'tables' ? t.dataTables : t.dataNone);
   const pick = (setter: (v: string) => void) => (v: string | null) => setter(!v || v === 'any' ? '' : v);
   const hasFilters = Boolean(q || sub || hardware || data);
+  const canReset = hasFilters || Boolean(sort);
 
   const columns: TableColumn<InvestigationRow>[] = [
     {key: 'id', header: t.colId, width: pixel(90)},
@@ -136,6 +144,7 @@ export default function CatalogPage() {
     {key: 'start_date', header: t.colYears, width: pixel(110), renderCell: r => years(r)},
     {key: 'file_count', header: t.colFiles, width: pixel(90), align: 'end', renderCell: r => r.file_count.toLocaleString()},
     {key: 'publication_count', header: t.colPubs, width: pixel(90), align: 'end'},
+    {key: 'reference_count', header: t.catalogSources, width: pixel(90), align: 'end'},
   ];
 
   return (
@@ -171,14 +180,16 @@ export default function CatalogPage() {
                 {value: 'newest', label: t.sortNewest},
                 {value: 'oldest', label: t.sortOldest},
                 {value: 'files', label: t.sortFiles},
+                {value: 'tables', label: t.sortTables},
+                {value: 'name', label: t.sortName},
                 {value: 'publications', label: t.sortPublications},
               ]}
-              value={sort || res.data?.sort || 'newest'}
+              value={res.data?.sort ?? (q ? 'relevance' : 'newest')}
               onChange={v => setSort(v ?? '')}
             />
           </div>
 
-          {hasFilters && (
+          {canReset && (
             <HStack hAlign="end">
               <Button
                 label={t.clearFilters}
@@ -190,6 +201,7 @@ export default function CatalogPage() {
                   setSub('');
                   setHardware('');
                   setData('');
+                  setSort('');
                 }}
               />
             </HStack>
@@ -206,18 +218,20 @@ export default function CatalogPage() {
               <EmptyState title={t.emptyDbTitle} description={t.emptyDbBody} />
             )
           ) : (
-            <div className="igris-table">
-              <Table<InvestigationRow>
-                aria-label={t.catalogTitle}
-                data={rows}
-                columns={columns}
-                idKey="id"
-                density="balanced"
-                hasHover
-                verticalAlign="top"
-                plugins={{selection: rowSelection}}
-              />
-            </div>
+            <VStack gap={2}>
+              <div className="igris-table">
+                <Table<InvestigationRow>
+                  aria-label={t.catalogTitle}
+                  data={rows}
+                  columns={columns}
+                  idKey="id"
+                  density="balanced"
+                  hasHover
+                  verticalAlign="top"
+                  plugins={{selection: rowSelection}}
+                />
+              </div>
+            </VStack>
           )}
 
           {selected.size > 0 && (

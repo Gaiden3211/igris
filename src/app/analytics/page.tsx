@@ -1,6 +1,6 @@
 'use client';
 
-import {Chart, ChartAxis, ChartGrid, bar, dot} from '@astryxdesign/charts';
+import {Chart, ChartAxis, ChartGrid, bar} from '@astryxdesign/charts';
 import {ChevronDownIcon} from '@heroicons/react/24/outline';
 import {Card} from '@astryxdesign/core/Card';
 import {Heading, Text} from '@astryxdesign/core/Text';
@@ -16,7 +16,6 @@ type Tally = {label: string; count: number};
 interface Analytics {
   total: number; withFiles: number; withTables: number; publications: number;
   byYear: Tally[]; bySub: Tally[]; byHardware: Tally[];
-  conditions: {id: string; label: string; oxygen: number; pressure: number}[];
 }
 interface Meta {
   scenarios: {id: string; name_en: string; name_uk: string; description_en: string | null; description_uk: string | null}[];
@@ -96,49 +95,23 @@ export default function AnalyticsPage() {
               )}
               {a.bySub.length > 0 && <Categories title={t.chartBySub} data={a.bySub} filter="sub" />}
               {a.byHardware.length > 0 && <Categories title={t.chartByHardware} data={a.byHardware} filter="hardware" />}
-              <Card>
-                <VStack gap={3}>
-                  {a.conditions.length === 0 ? (
-                    <>
-                      <Heading level={2}>{t.chartConditions}</Heading>
-                      <Text color="secondary">{t.chartConditionsEmpty}</Text>
-                    </>
-                  ) : (
-                    <Chart
-                      title={t.chartConditions}
-                      subtitle="x: O₂ (% vol), y: kPa"
-                      data={a.conditions}
-                      xKey="oxygen"
-                      series={[dot('pressure', {label: 'kPa'})]}
-                      height={320}
-                      xDomain={[0, 100]}
-                      grid={<ChartGrid horizontal />}
-                      axes={
-                        <>
-                          <ChartAxis position="bottom" />
-                          <ChartAxis position="left" />
-                        </>
-                      }
-                      tooltip
-                    />
-                  )}
-                  {scenarios.length > 0 && (
-                    <details className="igris-scenarios">
-                      <summary>
-                        <span>{t.scenarios}</span><ChevronDownIcon aria-hidden="true" />
-                      </summary>
-                      <dl>
-                        {scenarios.map(s => (
-                          <div key={s.id}>
-                            <dt>{lang === 'uk' ? s.name_uk : s.name_en}</dt>
-                            <dd>{lang === 'uk' ? s.description_uk : s.description_en}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                    </details>
-                  )}
-                </VStack>
-              </Card>
+              {scenarios.length > 0 && (
+                <Card>
+                  <details className="igris-scenarios">
+                    <summary>
+                      <span>{t.scenarios}</span><ChevronDownIcon aria-hidden="true" />
+                    </summary>
+                    <dl>
+                      {scenarios.map(s => (
+                        <div key={s.id}>
+                          <dt>{lang === 'uk' ? s.name_uk : s.name_en}</dt>
+                          <dd>{lang === 'uk' ? s.description_uk : s.description_en}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </details>
+                </Card>
+              )}
             </>
           )}
         </VStack>

@@ -7,6 +7,9 @@
 
 ## Anonymous quotas
 
+`LIMITS_ENABLED` is a server-only switch. It defaults to `true`. Local testing uses `LIMITS_ENABLED=false` in `.env.local`; production should set it to `true`. Disabling quotas skips enforcement/count queries but preserves usage accounting and input/output/time limits. No public endpoint or browser control can disable quotas. There is no remaining-message counter in the interface or successful API events.
+
+
 | Limit | Default | Variable |
 |---|---|---|
 | Messages per visitor per minute | 5 | `LIMIT_PER_MINUTE` |
@@ -14,9 +17,9 @@
 | Messages per network address per day | 90 | `LIMIT_PER_IP_DAY` |
 | Messages for all visitors per day | 600 | `LIMIT_GLOBAL_PER_DAY` |
 | Question length | 2,000 characters | `LIMIT_INPUT_CHARS` |
-| Answer length | 1,200 tokens | `LIMIT_OUTPUT_TOKENS` |
+| Answer length | 2,000 tokens | `LIMIT_OUTPUT_TOKENS` |
 
-When a limit is reached the assistant shows a message that the trial quota is used up; the Catalog and Analytics keep working. The per-address limit exists because a cookie can be cleared. The global limit caps spending. Every request is counted, including ones that fail midway.
+When an enabled daily limit is reached the assistant asks the user to try again tomorrow; the Catalog and Analytics keep working. The per-address limit exists because a cookie can be cleared. The global limit caps spending. Every request is counted, including ones that fail midway.
 
 ## What is stored about visitors
 

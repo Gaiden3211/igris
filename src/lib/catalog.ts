@@ -1,3 +1,5 @@
+import {sourcesForInvestigation} from './agent/challenge-sources';
+import {cleanCatalogLabel, distinctHardware, hardwareKey} from './catalogLabels';
 import {db} from './supabase';
 
 export interface InvestigationRow extends Record<string, unknown> {
@@ -14,6 +16,7 @@ export interface InvestigationRow extends Record<string, unknown> {
   file_count: number;
   table_count: number;
   publication_count: number;
+  reference_count: number;
   source_url: string;
 }
 
@@ -24,7 +27,17 @@ const LIGHT =
 export async function loadInvestigations(): Promise<InvestigationRow[]> {
   const {data, error} = await db().from('investigations').select(LIGHT).order('id').limit(2000);
   if (error) throw error;
-  return (data ?? []) as InvestigationRow[];
+  const rows = (data ?? []) as Omit<InvestigationRow, 'reference_count'>[];
+  const canonicalHardware = new Map<string, string>();
+  for (const label of distinctHardware(rows.flatMap(row => (row.hardware as string[] | null) ?? []))) {
+    canonicalHardware.set(hardwareKey(label), label);
+  }
+  return rows.map(row => ({
+    ...row,
+    hardware: distinctHardware((row.hardware as string[] | null) ?? []).map(label => canonicalHardware.get(hardwareKey(label)) ?? label),
+    sub_research_area: typeof row.sub_research_area === 'string' ? cleanCatalogLabel(row.sub_research_area) || null : null,
+    reference_count: sourcesForInvestigation(String(row.id)).length,
+  })) as InvestigationRow[];
 }
 
 export interface CatalogQuery {
@@ -46,25 +59,28 @@ const facet = (rows: InvestigationRow[], pick: (r: InvestigationRow) => string[]
 };
 
 export async function queryCatalog(query: CatalogQuery) {
-  let rows = await loadInvestigations();
-  if (query.domain) rows = rows.filter(r => r.domain_id === query.domain);
-
-  let rank: Map<string, number> | null = null;
   const q = query.q?.trim();
-  if (q) {
-    const {data} = await db().rpc('search_investigations', {q, domain: query.domain ?? null, lim: 25});
-    rank = new Map((data ?? []).map((r: {id: string; rank: number}) => [r.id, r.rank]));
-    const needle = q.toLowerCase();
-    // Full-text hits first, plus plain substring matches on id / acronym / title for short or partial terms.
-    rows = rows.filter(
-      r => rank!.has(r.id) || r.id.toLowerCase() === needle || r.acronym?.toLowerCase().includes(needle) || r.title.toLowerCase().includes(needle),
-    );
+  const [allRows, matches, ranked] = await Promise.all([
+    loadInvestigations(),
+    q ? db().from('investigations').select('id').textSearch('fts', q, {type: 'websearch', config: 'english'})
+      .order('id').limit(2000).throwOnError() : null,
+    q ? db().rpc('search_investigations', {q, domain: query.domain ?? null, lim: 25}).throwOnError() : null,
+  ]);
+  let rows = query.domain ? allRows.filter(r => r.domain_id === query.domain) : allRows;
+  const rank = new Map<string, number>((ranked?.data ?? []).map((r: {id: string; rank: number}) => [r.id, r.rank]));
+  const needle = q?.toLowerCase();
+  const exact = (r: InvestigationRow) => Number(r.id.toLowerCase() === needle || r.acronym?.toLowerCase() === needle);
+  if (needle) {
+    const fullText = new Set((matches?.data ?? []).map(r => r.id));
+    rows = rows.filter(r => fullText.has(r.id) || rank.has(r.id) || exact(r)
+      || r.acronym?.toLowerCase().includes(needle) || r.title.toLowerCase().includes(needle));
   }
 
   // Each facet counts the rows that match every OTHER filter, so a number always equals the results you get by
   // picking that option (Topic = Colloids no longer shows hardware that no colloid investigation used).
-  const bySub = (r: InvestigationRow) => !query.sub || r.sub_research_area === query.sub;
-  const byHardware = (r: InvestigationRow) => !query.hardware || r.hardware.includes(query.hardware);
+  const bySub = (r: InvestigationRow) => !query.sub || r.sub_research_area === cleanCatalogLabel(query.sub);
+  const selectedHardware = query.hardware ? hardwareKey(query.hardware) : '';
+  const byHardware = (r: InvestigationRow) => !selectedHardware || r.hardware.some(label => hardwareKey(label) === selectedHardware);
   const byData = (r: InvestigationRow) =>
     query.data === 'files' ? r.file_count > 0
     : query.data === 'tables' ? r.table_count > 0
@@ -86,22 +102,25 @@ export async function queryCatalog(query: CatalogQuery) {
 
   rows = rows.filter(r => bySub(r) && byHardware(r) && byData(r));
 
-  const sort = query.sort ?? (rank ? 'relevance' : 'newest');
-  const date = (r: InvestigationRow) => r.start_date ?? '';
-  rows.sort((a, b) => {
+  const orders = ['newest', 'oldest', 'files', 'tables', 'publications', 'name', ...(needle ? ['relevance'] : [])];
+  const sort = query.sort && orders.includes(query.sort) ? query.sort : needle ? 'relevance' : 'newest';
+  const collator = new Intl.Collator('en', {numeric: true, sensitivity: 'base'});
+  const dateOrder = (a: InvestigationRow, b: InvestigationRow, direction: number) =>
+    Number(!a.start_date) - Number(!b.start_date)
+    || (a.start_date ?? '').localeCompare(b.start_date ?? '') * direction;
+  const order = (a: InvestigationRow, b: InvestigationRow) => {
     switch (sort) {
       case 'relevance':
-        return (rank?.get(b.id) ?? 0) - (rank?.get(a.id) ?? 0);
-      case 'oldest':
-        return date(a).localeCompare(date(b));
-      case 'files':
-        return b.file_count - a.file_count;
-      case 'publications':
-        return b.publication_count - a.publication_count;
-      default:
-        return date(b).localeCompare(date(a));
+        return exact(b) - exact(a) || (rank.get(b.id) ?? 0) - (rank.get(a.id) ?? 0);
+      case 'oldest': return dateOrder(a, b, 1);
+      case 'files': return b.file_count - a.file_count;
+      case 'tables': return b.table_count - a.table_count;
+      case 'publications': return b.publication_count - a.publication_count;
+      case 'name': return collator.compare(a.acronym ?? a.title, b.acronym ?? b.title);
+      default: return dateOrder(a, b, -1);
     }
-  });
+  };
+  rows.sort((a, b) => order(a, b) || collator.compare(a.id, b.id));
 
   return {total: rows.length, rows, facets, sort};
 }

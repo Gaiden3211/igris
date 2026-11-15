@@ -1,0 +1,1018 @@
+{
+  "reviewedOn": "2026-11-14",
+  "sources": [
+    {
+      "id": "NTRS-20260001992",
+      "url": "https://ntrs.nasa.gov/citations/20260001992",
+      "publisher": "NASA NTRS",
+      "title": "Heat and Smoke Emission from Tests on the Saffire VI Experiment",
+      "year": 2026,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Later Saffire heat/smoke analysis; do not attribute these tests to Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Later Saffire heat/smoke analysis; do not attribute these tests to Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Later Saffire heat/smoke analysis; do not attribute these tests to Saffire I/II/III."
+        }
+      ],
+      "reason": "Later Saffire heat/smoke analysis; do not attribute these tests to Saffire I/II/III."
+    },
+    {
+      "id": "NTRS-20260002014",
+      "url": "https://ntrs.nasa.gov/citations/20260002014",
+      "publisher": "NASA NTRS",
+      "title": "The Effect of Pressure on Radiative Losses in Hot, Warm, and Cool Microgravity Spherical Diffusion Flames",
+      "year": 2026,
+      "links": [
+        {
+          "investigationId": "PSI-39",
+          "relation": "study",
+          "reason": "Uses CFI droplet data in comparison with a burner-supported-flame model. Other cool-flame modeling investigations are related context only."
+        },
+        {
+          "investigationId": "PSI-117",
+          "relation": "related",
+          "reason": "Uses CFI droplet data in comparison with a burner-supported-flame model. Other cool-flame modeling investigations are related context only."
+        },
+        {
+          "investigationId": "PSI-142",
+          "relation": "related",
+          "reason": "Uses CFI droplet data in comparison with a burner-supported-flame model. Other cool-flame modeling investigations are related context only."
+        }
+      ],
+      "reason": "Uses CFI droplet data in comparison with a burner-supported-flame model. Other cool-flame modeling investigations are related context only."
+    },
+    {
+      "id": "NTRS-20260000641",
+      "url": "https://ntrs.nasa.gov/citations/20260000641",
+      "publisher": "NASA NTRS",
+      "title": "Computational Fluid Dynamics Analysis of Flame Dynamics in Partial Gravity Environments in a Rotating Centrifuge",
+      "year": 2026,
+      "links": [],
+      "reason": "Rotating-centrifuge CFD has no verified exact counterpart in the current catalog."
+    },
+    {
+      "id": "REF-2",
+      "url": "https://doi.org/10.1016/j.proci.2026.106484",
+      "publisher": "Proceedings of the Combustion Institute",
+      "title": "Quiescent flame spread and extinction over acrylic sheets in microgravity at increased oxygen concentration",
+      "year": 2026,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "SoFIE acrylic-sheet tests are distinct from BASS/BASS-II solid-fuel tests."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "SoFIE acrylic-sheet tests are distinct from BASS/BASS-II solid-fuel tests."
+        },
+        {
+          "investigationId": "PSI-62",
+          "relation": "related",
+          "reason": "SoFIE acrylic-sheet tests are distinct from BASS/BASS-II solid-fuel tests."
+        }
+      ],
+      "reason": "SoFIE acrylic-sheet tests are distinct from BASS/BASS-II solid-fuel tests."
+    },
+    {
+      "id": "REF-4",
+      "url": "https://taskbook.nasaprs.com/tbp/index.cfm?TASKID=AB7D53A58994730B8E16F73F5BF545F7&action=public_query_taskbook_content",
+      "publisher": "NASA Task Book",
+      "title": "SoFIE-GEL: FY2026 task progress and bibliography",
+      "year": 2026,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "SoFIE-GEL project progress is distinct from completed BASS experiments."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "SoFIE-GEL project progress is distinct from completed BASS experiments."
+        }
+      ],
+      "reason": "SoFIE-GEL project progress is distinct from completed BASS experiments."
+    },
+    {
+      "id": "NTRS-20260002050",
+      "url": "https://ntrs.nasa.gov/citations/20260002050",
+      "publisher": "NASA NTRS",
+      "title": "Surface Vehicle Atmospheric Considerations for Moon to Mars Exploration",
+      "year": 2026,
+      "links": [],
+      "reason": "Exploration atmosphere design has no exact PSI investigation in the current catalog."
+    },
+    {
+      "id": "NTRS-20260001966",
+      "url": "https://ntrs.nasa.gov/citations/20260001966",
+      "publisher": "NASA NTRS",
+      "title": "Material Flammability at Lunar and Martian Gravity",
+      "year": 2026,
+      "links": [],
+      "reason": "FM2 and lunar/Martian screening have no exact current PSI counterpart; retain as topic-level context."
+    },
+    {
+      "id": "NTRS-20260001542",
+      "url": "https://ntrs.nasa.gov/citations/20260001542",
+      "publisher": "NASA NTRS",
+      "title": "Flammability Testing Configuration and Approach of Barrier Material Assemblies Designed for Space Flight Applications",
+      "year": 2026,
+      "links": [],
+      "reason": "Barrier-assembly test development has no matching current PSI investigation."
+    },
+    {
+      "id": "NTRS-20260004263",
+      "url": "https://ntrs.nasa.gov/citations/20260004263",
+      "publisher": "NASA NTRS",
+      "title": "A Decade of Aerosol Sampling, Measurements and Characterization on ISS",
+      "year": 2026,
+      "links": [
+        {
+          "investigationId": "PSI-47",
+          "relation": "related",
+          "reason": "ISS aerosol monitoring includes non-fire aerosols; it provides measurement context for smoke studies."
+        },
+        {
+          "investigationId": "PSI-101",
+          "relation": "related",
+          "reason": "ISS aerosol monitoring includes non-fire aerosols; it provides measurement context for smoke studies."
+        },
+        {
+          "investigationId": "PSI-102",
+          "relation": "related",
+          "reason": "ISS aerosol monitoring includes non-fire aerosols; it provides measurement context for smoke studies."
+        },
+        {
+          "investigationId": "PSI-115",
+          "relation": "related",
+          "reason": "ISS aerosol monitoring includes non-fire aerosols; it provides measurement context for smoke studies."
+        }
+      ],
+      "reason": "ISS aerosol monitoring includes non-fire aerosols; it provides measurement context for smoke studies."
+    },
+    {
+      "id": "REF-7",
+      "url": "https://doi.org/10.1016/j.combustflame.2026.114800",
+      "publisher": "Combustion and Flame",
+      "title": "Investigation of flame spread over a thin wire under simulated lunar and terrestrial gravity using a centrifuge during parabolic flight",
+      "year": 2026,
+      "links": [],
+      "reason": "FLARE-3 wire parabolic-flight tests have no matching current PSI investigation."
+    },
+    {
+      "id": "REF-8",
+      "url": "https://doi.org/10.1016/j.proci.2026.106120",
+      "publisher": "Proceedings of the Combustion Institute",
+      "title": "Fully coupled numerical modelling of flame spread along polymer insulated electrical wire",
+      "year": 2026,
+      "links": [],
+      "reason": "Insulated-wire numerical modeling has no matching current PSI investigation."
+    },
+    {
+      "id": "REF-9",
+      "url": "https://doi.org/10.1016/j.firesaf.2026.104708",
+      "publisher": "Fire Safety Journal",
+      "title": "Comparative analysis of overload ignition of electrical wires under varying test conditions",
+      "year": 2026,
+      "links": [],
+      "reason": "Wire-overload drop-tower ignition tests have no matching current PSI investigation."
+    },
+    {
+      "id": "REF-1",
+      "url": "https://doi.org/10.1080/00102202.2025.2595114",
+      "publisher": "Combustion Science and Technology",
+      "title": "Influence of Droplet Size and Fuel Composition on Sooting Behavior in Microgravity Droplet Combustion",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-39",
+          "relation": "related",
+          "reason": "FLEX-2 soot reanalysis concerns different droplet tests from CFI."
+        }
+      ],
+      "reason": "FLEX-2 soot reanalysis concerns different droplet tests from CFI."
+    },
+    {
+      "id": "REF-3",
+      "url": "https://commons.case.edu/facultyworks/1290/",
+      "publisher": "Combustion and Flame",
+      "title": "Experimental Determination of Diffusion Flame Extinction Boundaries Over a PMMA Sphere: The Effect of Sub-Surface Solid Heating",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "SoFIE-GEL uses PMMA spheres, unlike BASS configurations."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "SoFIE-GEL uses PMMA spheres, unlike BASS configurations."
+        }
+      ],
+      "reason": "SoFIE-GEL uses PMMA spheres, unlike BASS configurations."
+    },
+    {
+      "id": "NTRS-20250002675",
+      "url": "https://ntrs.nasa.gov/citations/20250002675",
+      "publisher": "NASA NTRS",
+      "title": "Vehicle Modeling During the Burn Events in the Saffire VI Experiments",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Vehicle modeling of Saffire VI; not measured outcomes for earlier catalog flights."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Vehicle modeling of Saffire VI; not measured outcomes for earlier catalog flights."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Vehicle modeling of Saffire VI; not measured outcomes for earlier catalog flights."
+        }
+      ],
+      "reason": "Vehicle modeling of Saffire VI; not measured outcomes for earlier catalog flights."
+    },
+    {
+      "id": "NTRS-20250001364",
+      "url": "https://ntrs.nasa.gov/citations/20250001364",
+      "publisher": "NASA NTRS",
+      "title": "Fire and Flame Research in the International Space Station’s Combustion Integrated Rack",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-39",
+          "relation": "program",
+          "reason": "CIR program overview; do not attribute all program findings to each catalog study."
+        },
+        {
+          "investigationId": "PSI-22",
+          "relation": "program",
+          "reason": "CIR program overview; do not attribute all program findings to each catalog study."
+        },
+        {
+          "investigationId": "PSI-159",
+          "relation": "program",
+          "reason": "CIR program overview; do not attribute all program findings to each catalog study."
+        },
+        {
+          "investigationId": "PSI-106",
+          "relation": "program",
+          "reason": "CIR program overview; do not attribute all program findings to each catalog study."
+        }
+      ],
+      "reason": "CIR program overview; do not attribute all program findings to each catalog study."
+    },
+    {
+      "id": "NTRS-20250006779",
+      "url": "https://ntrs.nasa.gov/citations/20250006779",
+      "publisher": "NASA NTRS",
+      "title": "Solid Fuel Ignition Testing for Lunar Applications, Theory and Experimental Results",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "Lunar ignition facility tests provide partial-gravity context, not BASS test results."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "Lunar ignition facility tests provide partial-gravity context, not BASS test results."
+        }
+      ],
+      "reason": "Lunar ignition facility tests provide partial-gravity context, not BASS test results."
+    },
+    {
+      "id": "NTRS-20250010653",
+      "url": "https://ntrs.nasa.gov/citations/20250010653",
+      "publisher": "NASA NTRS",
+      "title": "Lunar Combustion Investigation: Flammability Results from a Rotating Sounding Rocket",
+      "year": 2025,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "LUCI rotating rocket tests compare solid-fuel flammability under different gravity conditions."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "LUCI rotating rocket tests compare solid-fuel flammability under different gravity conditions."
+        }
+      ],
+      "reason": "LUCI rotating rocket tests compare solid-fuel flammability under different gravity conditions."
+    },
+    {
+      "id": "NTRS-20250005133",
+      "url": "https://ntrs.nasa.gov/citations/20250005133",
+      "publisher": "NASA NTRS",
+      "title": "Measurement of Heat Release Rate, Aerosol, and Gas Products During Lithium-Ion Battery Thermal Runaway in Devices",
+      "year": 2025,
+      "links": [],
+      "reason": "Battery thermal-runaway apparatus has no matching current PSI investigation."
+    },
+    {
+      "id": "NTRS-20250007586",
+      "url": "https://ntrs.nasa.gov/citations/20250007586",
+      "publisher": "NASA NTRS",
+      "title": "Guidelines for Assessing the Toxic Hazard of Spacecraft Chemicals and Test Materials",
+      "year": 2025,
+      "links": [],
+      "reason": "General toxic-hazard guidance is a topic reference, not a specific catalog study."
+    },
+    {
+      "id": "NTRS-20240002981",
+      "url": "https://ntrs.nasa.gov/citations/20240002981",
+      "publisher": "NASA NTRS",
+      "title": "Preliminary Results from the Saffire VI Experiment",
+      "year": 2024,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Saffire VI preliminary findings concern a different flight from Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Saffire VI preliminary findings concern a different flight from Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Saffire VI preliminary findings concern a different flight from Saffire I/II/III."
+        }
+      ],
+      "reason": "Saffire VI preliminary findings concern a different flight from Saffire I/II/III."
+    },
+    {
+      "id": "NTRS-20240005668",
+      "url": "https://ntrs.nasa.gov/citations/20240005668",
+      "publisher": "NASA NTRS",
+      "title": "Predicting the Microgravity Performance of Terrestrial Portable Fire Extinguishers",
+      "year": 2024,
+      "links": [],
+      "reason": "Portable extinguisher modeling has no matching current PSI investigation."
+    },
+    {
+      "id": "NTRS-20240008602",
+      "url": "https://ntrs.nasa.gov/citations/20240008602",
+      "publisher": "NASA NTRS",
+      "title": "Vehicle Modeling During the Burning of Thermally Thick Samples in the Saffire V Experiments",
+      "year": 2024,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Saffire V vehicle modeling concerns a later flight than catalog Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Saffire V vehicle modeling concerns a later flight than catalog Saffire I/II/III."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Saffire V vehicle modeling concerns a later flight than catalog Saffire I/II/III."
+        }
+      ],
+      "reason": "Saffire V vehicle modeling concerns a later flight than catalog Saffire I/II/III."
+    },
+    {
+      "id": "NTRS-20240007628",
+      "url": "https://ntrs.nasa.gov/citations/20240007628",
+      "publisher": "NASA NTRS",
+      "title": "Extinction of Solid Diffusion Flame in Microgravity: Details of Quenching and Blowoff Processes",
+      "year": 2024,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "Solid diffusion-flame extinction study uses a different test configuration from BASS."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "Solid diffusion-flame extinction study uses a different test configuration from BASS."
+        }
+      ],
+      "reason": "Solid diffusion-flame extinction study uses a different test configuration from BASS."
+    },
+    {
+      "id": "REF-5",
+      "url": "https://doi.org/10.1016/j.proci.2024.105200",
+      "publisher": "Proceedings of the Combustion Institute",
+      "title": "Quantitative prediction of the flammability limits of filter paper in microgravity conditions",
+      "year": 2024,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "FLARE filter-paper modeling is distinct from BASS/BASS-II experiments."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "FLARE filter-paper modeling is distinct from BASS/BASS-II experiments."
+        },
+        {
+          "investigationId": "PSI-62",
+          "relation": "related",
+          "reason": "FLARE filter-paper modeling is distinct from BASS/BASS-II experiments."
+        }
+      ],
+      "reason": "FLARE filter-paper modeling is distinct from BASS/BASS-II experiments."
+    },
+    {
+      "id": "NTRS-20220015583",
+      "url": "https://ntrs.nasa.gov/citations/20220015583",
+      "publisher": "NASA NTRS",
+      "title": "ACME: Advanced Combustion via Microgravity Experiments",
+      "year": 2023,
+      "links": [
+        {
+          "investigationId": "PSI-22",
+          "relation": "program",
+          "reason": "ACME overview covers the experiment family, not individual measured findings."
+        },
+        {
+          "investigationId": "PSI-159",
+          "relation": "program",
+          "reason": "ACME overview covers the experiment family, not individual measured findings."
+        },
+        {
+          "investigationId": "PSI-106",
+          "relation": "program",
+          "reason": "ACME overview covers the experiment family, not individual measured findings."
+        }
+      ],
+      "reason": "ACME overview covers the experiment family, not individual measured findings."
+    },
+    {
+      "id": "NTRS-20230004106",
+      "url": "https://ntrs.nasa.gov/citations/20230004106",
+      "publisher": "NASA NTRS",
+      "title": "Combined Experimental and Modeling Study of the Interactions of Acid Gas with Common Spacecraft Surfaces for Fire Safety Applications",
+      "year": 2023,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Acid-gas uptake provides postfire interpretation context, not those flights' measured results."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Acid-gas uptake provides postfire interpretation context, not those flights' measured results."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Acid-gas uptake provides postfire interpretation context, not those flights' measured results."
+        }
+      ],
+      "reason": "Acid-gas uptake provides postfire interpretation context, not those flights' measured results."
+    },
+    {
+      "id": "REF-6",
+      "url": "https://doi.org/10.1007/s10694-023-01507-3",
+      "publisher": "Fire Technology",
+      "title": "Flame Spread Behavior Over a Filter Paper Near Extinction Limit Under Microgravity on the ISS/Kibo",
+      "year": 2023,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "related",
+          "reason": "FLARE ISS/Kibo filter-paper tests use a different experiment and configuration."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "FLARE ISS/Kibo filter-paper tests use a different experiment and configuration."
+        },
+        {
+          "investigationId": "PSI-62",
+          "relation": "related",
+          "reason": "FLARE ISS/Kibo filter-paper tests use a different experiment and configuration."
+        }
+      ],
+      "reason": "FLARE ISS/Kibo filter-paper tests use a different experiment and configuration."
+    },
+    {
+      "id": "NTRS-20210011385",
+      "url": "https://ntrs.nasa.gov/citations/20210011385",
+      "publisher": "NASA NTRS",
+      "title": "Burning and Suppression of Solids–II (BASS-II) Summary Report",
+      "year": 2021,
+      "links": [
+        {
+          "investigationId": "PSI-25",
+          "relation": "study",
+          "reason": "BASS-II results; BASS and its modeling follow-up use different investigations."
+        },
+        {
+          "investigationId": "PSI-26",
+          "relation": "related",
+          "reason": "BASS-II results; BASS and its modeling follow-up use different investigations."
+        },
+        {
+          "investigationId": "PSI-62",
+          "relation": "related",
+          "reason": "BASS-II results; BASS and its modeling follow-up use different investigations."
+        }
+      ],
+      "reason": "BASS-II results; BASS and its modeling follow-up use different investigations."
+    },
+    {
+      "id": "NTRS-20210017780",
+      "url": "https://ntrs.nasa.gov/citations/20210017780",
+      "publisher": "NASA NTRS",
+      "title": "Fire Safety Implications of Preliminary Results from Saffire IV and V Experiments on Large Scale Spacecraft Fires",
+      "year": 2021,
+      "links": [
+        {
+          "investigationId": "PSI-98",
+          "relation": "related",
+          "reason": "Saffire IV/V are later flights than catalog Saffire I/II/III; keep the configurations separate."
+        },
+        {
+          "investigationId": "PSI-99",
+          "relation": "related",
+          "reason": "Saffire IV/V are later flights than catalog Saffire I/II/III; keep the configurations separate."
+        },
+        {
+          "investigationId": "PSI-100",
+          "relation": "related",
+          "reason": "Saffire IV/V are later flights than catalog Saffire I/II/III; keep the configurations separate."
+        }
+      ],
+      "reason": "Saffire IV/V are later flights than catalog Saffire I/II/III; keep the configurations separate."
+    },
+    {
+      "id": "NTRS-20205003817",
+      "url": "https://ntrs.nasa.gov/citations/20205003817",
+      "publisher": "NASA NTRS",
+      "title": "Spacecraft Smoke Detector Characterization with Reference and Smoke Aerosols",
+      "year": 2020,
+      "links": [
+        {
+          "investigationId": "PSI-47",
+          "relation": "related",
+          "reason": "Ground detector characterization provides context for orbital smoke studies."
+        },
+        {
+          "investigationId": "PSI-101",
+          "relation": "related",
+          "reason": "Ground detector characterization provides context for orbital smoke studies."
+        },
+        {
+          "investigationId": "PSI-102",
+          "relation": "related",
+          "reason": "Ground detector characterization provides context for orbital smoke studies."
+        },
+        {
+          "investigationId": "PSI-115",
+          "relation": "related",
+          "reason": "Ground detector characterization provides context for orbital smoke studies."
+        }
+      ],
+      "reason": "Ground detector characterization provides context for orbital smoke studies."
+    },
+    {
+      "id": "NTRS-20150023456",
+      "url": "https://ntrs.nasa.gov/citations/20150023456",
+      "publisher": "NASA NTRS",
+      "title": "Detailed Results from the Flame Extinguishment Experiment (FLEX)",
+      "year": 2015,
+      "links": [
+        {
+          "investigationId": "PSI-39",
+          "relation": "related",
+          "reason": "Earlier FLEX droplet tests provide context for CFI; they are not CFI results."
+        }
+      ],
+      "reason": "Earlier FLEX droplet tests provide context for CFI; they are not CFI results."
+    },
+    {
+      "id": "NTRS-20130004397",
+      "url": "https://ntrs.nasa.gov/citations/20130004397",
+      "publisher": "NASA NTRS",
+      "title": "Burning Questions in Gravity-Dependent Combustion Science",
+      "year": 2012,
+      "links": [
+        {
+          "investigationId": "PSI-39",
+          "relation": "related",
+          "reason": "FLEX-2 program scope provides related droplet-combustion context; not CFI results."
+        }
+      ],
+      "reason": "FLEX-2 program scope provides related droplet-combustion context; not CFI results."
+    },
+    {
+      "id": "NTRS-20080012612",
+      "url": "https://ntrs.nasa.gov/citations/20080012612",
+      "publisher": "NASA NTRS",
+      "title": "Spacecraft Fire Detection: Smoke Properties and Transport in Low-Gravity",
+      "year": 2007,
+      "links": [
+        {
+          "investigationId": "PSI-47",
+          "relation": "related",
+          "reason": "Low-gravity smoke properties and transport provide detection context; check the specific experiment in the source."
+        },
+        {
+          "investigationId": "PSI-101",
+          "relation": "related",
+          "reason": "Low-gravity smoke properties and transport provide detection context; check the specific experiment in the source."
+        },
+        {
+          "investigationId": "PSI-102",
+          "relation": "related",
+          "reason": "Low-gravity smoke properties and transport provide detection context; check the specific experiment in the source."
+        },
+        {
+          "investigationId": "PSI-115",
+          "relation": "related",
+          "reason": "Low-gravity smoke properties and transport provide detection context; check the specific experiment in the source."
+        }
+      ],
+      "reason": "Low-gravity smoke properties and transport provide detection context; check the specific experiment in the source."
+    }
+  ],
+  "catalog": [
+    {
+      "id": "PSI-100",
+      "title": "Spacecraft Fire Experiment-III",
+      "sources": [
+        {
+          "id": "NTRS-20260001992",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250002675",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240002981",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240008602",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20230004106",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20210017780",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-101",
+      "title": "Smoke Aerosol Measurement Experiment-Reflight",
+      "sources": [
+        {
+          "id": "NTRS-20260004263",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20205003817",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20080012612",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-102",
+      "title": "Smoke and Aerosol Measurement Experiment",
+      "sources": [
+        {
+          "id": "NTRS-20260004263",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20205003817",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20080012612",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-106",
+      "title": "Structure and Liftoff In Combustion Experiment",
+      "sources": [
+        {
+          "id": "NTRS-20250001364",
+          "relation": "program"
+        },
+        {
+          "id": "NTRS-20220015583",
+          "relation": "program"
+        }
+      ]
+    },
+    {
+      "id": "PSI-115",
+      "title": "Utilization of the Smoke Aerosol Measurement Experiment Data for Advanced Modeling and Simulation of Smoke Generation in Micro-Gravity",
+      "sources": [
+        {
+          "id": "NTRS-20260004263",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20205003817",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20080012612",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-117",
+      "title": "Effect of External Thermo-Convective Perturbation on Cool Flame Dynamics: A Multidimensional Multi-Physics CFD Analysis",
+      "sources": [
+        {
+          "id": "NTRS-20260002014",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-142",
+      "title": "Quantitative Studies of Cool Flame Transitions at Radiation / Stretch Extinction Using Counterflow Flames",
+      "sources": [
+        {
+          "id": "NTRS-20260002014",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-159",
+      "title": "Advanced Combustion via Microgravity Experiments / Cool Flames Investigation with Gases",
+      "sources": [
+        {
+          "id": "NTRS-20250001364",
+          "relation": "program"
+        },
+        {
+          "id": "NTRS-20220015583",
+          "relation": "program"
+        }
+      ]
+    },
+    {
+      "id": "PSI-22",
+      "title": "Advanced Combustion via Microgravity Experiments Electric-Field Effects on Laminar Diffusion Flames",
+      "sources": [
+        {
+          "id": "NTRS-20250001364",
+          "relation": "program"
+        },
+        {
+          "id": "NTRS-20220015583",
+          "relation": "program"
+        }
+      ]
+    },
+    {
+      "id": "PSI-25",
+      "title": "Burning and Suppression of Solids - II",
+      "sources": [
+        {
+          "id": "NTRS-20210011385",
+          "relation": "study"
+        },
+        {
+          "id": "REF-2",
+          "relation": "related"
+        },
+        {
+          "id": "REF-4",
+          "relation": "related"
+        },
+        {
+          "id": "REF-3",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250006779",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250010653",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240007628",
+          "relation": "related"
+        },
+        {
+          "id": "REF-5",
+          "relation": "related"
+        },
+        {
+          "id": "REF-6",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-26",
+      "title": "Burning and Suppression of Solids",
+      "sources": [
+        {
+          "id": "REF-2",
+          "relation": "related"
+        },
+        {
+          "id": "REF-4",
+          "relation": "related"
+        },
+        {
+          "id": "REF-3",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250006779",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250010653",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240007628",
+          "relation": "related"
+        },
+        {
+          "id": "REF-5",
+          "relation": "related"
+        },
+        {
+          "id": "REF-6",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20210011385",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-39",
+      "title": "Cool Flames Investigation",
+      "sources": [
+        {
+          "id": "NTRS-20260002014",
+          "relation": "study"
+        },
+        {
+          "id": "NTRS-20250001364",
+          "relation": "program"
+        },
+        {
+          "id": "REF-1",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20150023456",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20130004397",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-47",
+      "title": "Dust and Aerosol Measurement Feasibility Test / Dust and Aerosol Measurement Feasibility Test-2",
+      "sources": [
+        {
+          "id": "NTRS-20260004263",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20205003817",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20080012612",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-62",
+      "title": "Concurrent Flame Spread Modeling using Flamelet Generated Manifolds in Microgravity with Comparison to BASS Experiments using Two-Color Tomography",
+      "sources": [
+        {
+          "id": "REF-2",
+          "relation": "related"
+        },
+        {
+          "id": "REF-5",
+          "relation": "related"
+        },
+        {
+          "id": "REF-6",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20210011385",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-98",
+      "title": "Spacecraft Fire Safety Experiment-I",
+      "sources": [
+        {
+          "id": "NTRS-20260001992",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250002675",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240002981",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240008602",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20230004106",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20210017780",
+          "relation": "related"
+        }
+      ]
+    },
+    {
+      "id": "PSI-99",
+      "title": "Spacecraft Fire Experiment-II",
+      "sources": [
+        {
+          "id": "NTRS-20260001992",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20250002675",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240002981",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20240008602",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20230004106",
+          "relation": "related"
+        },
+        {
+          "id": "NTRS-20210017780",
+          "relation": "related"
+        }
+      ]
+    }
+  ]
+}

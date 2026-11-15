@@ -2,9 +2,10 @@
 
 import {createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode} from 'react';
 import {z} from 'zod';
+import {conversationTitlesSchema, type ConversationTitles} from './conversationTitle';
 import type {ChatFocus} from './chatSeed';
 import {COMPARE_MAX, comparisonKey} from './compare';
-import type {ChatMsg} from './useChat';
+import {sourceCardSchema, chatRepositorySchema, type ChatMsg, type ChatRepository} from './chatAdapter';
 
 const STORAGE_KEY = 'igris-chats-v1';
 const MAX_CHATS = 50;
@@ -15,41 +16,38 @@ export interface Conversation {
   id: string;
   focus: ChatFocus | null;
   pinned?: boolean;
+  titles?: ConversationTitles;
+  unread?: string;
   messages: ChatMsg[];
-  comparison?: {ids: string[]; names: string[]; summary: ChatMsg | null};
+  repository?: ChatRepository;
+  comparison?: {ids: string[]; names: string[]; summary: ChatMsg | null; publicResearch?: boolean};
 }
 
-const card = z.object({
-  id: z.string().regex(/^(PSI|PUB)-\d+$/),
-  kind: z.enum(['investigation', 'publication']),
-  title: z.string(),
-  subtitle: z.string().optional(),
-  url: z.string().refine(url => {
-    if (!url) return true;
-    try {
-      const {protocol} = new URL(url);
-      return protocol === 'https:' || protocol === 'http:';
-    } catch {
-      return false;
-    }
-  }),
-  investigationId: z.string().regex(/^PSI-\d+$/).optional(),
-});
+const card = sourceCardSchema;
 const message = z.object({
   role: z.enum(['user', 'assistant']),
   content: z.string(),
   cards: z.array(card).catch([]),
   error: z.string().optional(),
-}).transform(turn => ({...turn, steps: [] as ChatMsg['steps']}));
+  errorCode: z.enum(['answer_unverified', 'answer_incomplete', 'model_unavailable']).optional(),
+}).transform((turn): ChatMsg => ({...turn,
+  errorCode: turn.errorCode ?? (turn.error?.startsWith('Could not confirm the draft')
+    || turn.error?.startsWith('Не вдалося підтвердити відповідь') ? 'answer_unverified' as const : undefined),
+  steps: [] as ChatMsg['steps'],
+}));
 const conversation = z.object({
   id: z.union([z.uuid(), z.string().regex(/^comparison:PSI-\d{1,6}(,PSI-\d{1,6}){1,3}$/)]),
   focus: z.object({ids: z.array(z.string().regex(/^PSI-\d+$/)).max(4), names: z.array(z.string()).max(4)}).nullable(),
   messages: z.array(message).max(MAX_MESSAGES),
+  repository: chatRepositorySchema.optional().catch(undefined),
   pinned: z.boolean().optional(),
+  titles: conversationTitlesSchema.optional().catch(undefined),
+  unread: z.string().max(32).optional(),
   comparison: z.object({
     ids: z.array(z.string().regex(/^PSI-\d{1,6}$/)).min(2).max(COMPARE_MAX),
     names: z.array(z.string()).min(2).max(COMPARE_MAX),
     summary: message.nullable(),
+    publicResearch: z.boolean().optional(),
   }).optional(),
 }).refine(chat => chat.comparison
   ? chat.id === comparisonKey(chat.comparison.ids) && new Set(chat.comparison.ids).size === chat.comparison.ids.length
@@ -83,7 +81,8 @@ const TITLE_WORDS = 6;
 const TITLE_LENGTH = 42;
 const titleIntro = /^(?:(?:hey|hi|hello|привіт|вітаю)[!,.\s]+|(?:please|будь ласка)[,\s]+|(?:could you|can you|would you|можеш|можете|чи можеш|чи можете)[\s]+|(?:tell me about|tell me|find information about|find me|find|explain|show me|розкажи мені про|розкажіть мені про|розкажи про|розкажіть про|поясни|поясніть|знайди інформацію про|знайдіть інформацію про|знайди|знайдіть)[\s]+)+/iu;
 
-export function conversationTitle({messages, comparison}: Conversation) {
+export function conversationTitle({messages, comparison, titles}: Conversation, lang?: 'en' | 'uk') {
+  if (lang && titles?.[lang]) return titles[lang];
   if (comparison) return comparison.names.join(' · ');
 
   const firstMessage = (messages.find(m => m.role === 'user')?.content ?? '').replace(/\s+/g, ' ').trim();
@@ -92,24 +91,31 @@ export function conversationTitle({messages, comparison}: Conversation) {
   const title = words.slice(0, TITLE_WORDS).join(' ');
   if (words.length <= TITLE_WORDS && Array.from(title).length <= TITLE_LENGTH) return title;
 
-  const prefix = Array.from(title).slice(0, TITLE_LENGTH - 1).join('');
+  const prefix = Array.from(title).slice(0, TITLE_LENGTH).join('');
   const lastSpace = prefix.lastIndexOf(' ');
   const withinWord = !/^(?:\s|$)/u.test(title.slice(prefix.length));
-  return (withinWord && lastSpace > 0 ? prefix.slice(0, lastSpace) : prefix).trimEnd() + '…';
+  return (withinWord && lastSpace > 0 ? prefix.slice(0, lastSpace) : prefix).trimEnd().replace(/\s+(?:and|or|of|the|to|і|та|або|про|для|з|у|в)$/iu, '');
 }
 
 const ChatHistoryContext = createContext<{
   ready: boolean;
   conversations: Conversation[];
   save: (chat: Conversation, update?: 'messages' | 'summary') => void;
+  saveTitles: (id: string, titles: ConversationTitles) => void;
   togglePin: (id: string) => void;
   removeChat: (id: string) => void;
-}>({ready: false, conversations: [], save: () => {}, togglePin: () => {}, removeChat: () => {}});
+  running: Record<string, string[]>;
+  setRunning: (id: string, token: string, running: boolean) => void;
+  setUnread: (id: string, response: string) => void;
+  markRead: (id: string, response: string) => void;
+  reopen: (id: string) => void;
+}>({ready: false, conversations: [], save: () => {}, saveTitles: () => {}, togglePin: () => {}, removeChat: () => {}, running: {}, setRunning: () => {}, setUnread: () => {}, markRead: () => {}, reopen: () => {}});
 
 export const useChatHistory = () => useContext(ChatHistoryContext);
 
 export function ChatHistoryProvider({children}: {children: ReactNode}) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [running, updateRunning] = useState<Record<string, string[]>>({});
   const [ready, setReady] = useState(false);
   const latest = useRef<Conversation[]>([]);
   const memoryOnly = useRef(false);
@@ -131,7 +137,7 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
       load();
       const currentIds = new Set(latest.current.map(chat => chat.id));
       for (const chat of previous) {
-        if (!chat.comparison && !currentIds.has(chat.id)) removedChats.current.add(chat.id);
+        if (!currentIds.has(chat.id)) removedChats.current.add(chat.id);
       }
     };
     window.addEventListener('storage', onStorage);
@@ -167,29 +173,60 @@ export function ChatHistoryProvider({children}: {children: ReactNode}) {
     const previous = current.find(item => item.id === chat.id);
     const next = validated.data;
     next.pinned = previous?.pinned;
+    next.titles = previous?.titles;
+    next.unread = previous?.unread;
     if (next.comparison && previous?.comparison) {
-      if (update === 'summary') next.messages = previous.messages;
-      if (update === 'messages') next.comparison.summary = previous.comparison.summary;
+      if (update === 'summary') { next.messages = previous.messages; next.repository = previous.repository; }
+      if (update === 'messages') {
+        next.comparison.summary = previous.comparison.summary;
+        next.comparison.publicResearch = previous.comparison.publicResearch;
+      }
       else next.comparison.summary ??= previous.comparison.summary;
     }
-    if (JSON.stringify(previous) === JSON.stringify(next)) return;
-    const updated = [next, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
+    const normalized = conversation.parse(next);
+    if (JSON.stringify(previous) === JSON.stringify(normalized)) return;
+    const updated = [normalized, ...current.filter(item => item.id !== chat.id)].slice(0, MAX_CHATS);
     writeHistory(updated);
+  }, [writeHistory]);
+
+  const saveTitles = useCallback((id: string, titles: ConversationTitles) => {
+    const validated = conversationTitlesSchema.safeParse(titles);
+    if (!validated.success || removedChats.current.has(id)) return;
+    const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
+    if (!current.some(chat => chat.id === id)) return;
+    writeHistory(current.map(chat => chat.id === id ? {...chat, titles: validated.data} : chat));
   }, [writeHistory]);
 
   const togglePin = useCallback((id: string) => {
     const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
     const chat = current.find(chat => chat.id === id);
-    if (!chat || chat.comparison) return;
+    if (!chat) return;
     writeHistory(current.map(item => item.id === id ? {...item, pinned: !item.pinned} : item));
   }, [writeHistory]);
 
   const removeChat = useCallback((id: string) => {
     const current = (memoryOnly.current ? null : readHistory()) ?? latest.current;
-    if (!current.some(chat => chat.id === id && !chat.comparison)) return;
+    if (!current.some(chat => chat.id === id)) return;
     removedChats.current.add(id);
     writeHistory(current.filter(chat => chat.id !== id));
   }, [writeHistory]);
 
-  return <ChatHistoryContext.Provider value={{ready, conversations, save, togglePin, removeChat}}>{children}</ChatHistoryContext.Provider>;
+  const setRunning = useCallback((id: string, token: string, active: boolean) => {
+    updateRunning(previous => {
+      const tokens = new Set(previous[id] ?? []);
+      if (tokens.has(token) === active) return previous;
+      if (active) tokens.add(token); else tokens.delete(token);
+      return {...previous, [id]: [...tokens]};
+    });
+  }, []);
+  const setUnread = useCallback((id: string, response: string) => {
+    writeHistory(latest.current.map(chat => chat.id === id ? {...chat, unread: response} : chat));
+  }, [writeHistory]);
+  const markRead = useCallback((id: string, response: string) => {
+    if (!latest.current.some(chat => chat.id === id && chat.unread === response)) return;
+    writeHistory(latest.current.map(chat => chat.id === id ? {...chat, unread: undefined} : chat));
+  }, [writeHistory]);
+  const reopen = useCallback((id: string) => { removedChats.current.delete(id); }, []);
+
+  return <ChatHistoryContext.Provider value={{ready, conversations, save, saveTitles, togglePin, removeChat, running, setRunning, setUnread, markRead, reopen}}>{children}</ChatHistoryContext.Provider>;
 }

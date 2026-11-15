@@ -17,11 +17,15 @@ export function useApi<T>(url: string | null): ApiState<T> {
     setState(s => ({...s, loading: true}));
     fetch(url, {signal: ctrl.signal})
       .then(async r => {
-        if (r.ok) setState({data: (await r.json()) as T, error: null, loading: false});
-        else setState({data: null, error: r.status === 503 ? 'not_configured' : 'unavailable', loading: false});
+        if (r.ok) {
+          const data = await r.json() as T;
+          if (!ctrl.signal.aborted) setState({data, error: null, loading: false});
+        } else if (!ctrl.signal.aborted) {
+          setState({data: null, error: r.status === 503 ? 'not_configured' : 'unavailable', loading: false});
+        }
       })
-      .catch(e => {
-        if (e?.name !== 'AbortError') setState({data: null, error: 'unavailable', loading: false});
+      .catch(() => {
+        if (!ctrl.signal.aborted) setState({data: null, error: 'unavailable', loading: false});
       });
     return () => ctrl.abort();
   }, [url]);

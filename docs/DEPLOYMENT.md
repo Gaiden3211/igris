@@ -4,6 +4,10 @@
 
 The project `aeycforegdtnshjszpdg` (region eu-central-1) already has the schema applied. For a fresh project, run the files in `supabase/migrations/` in order in the SQL editor.
 
+Before deploying the comparison API, apply [the comparison cache migration](../supabase/migrations/20261115075947_comparison_cache.sql) to the target Supabase database. The API reads and writes this cache via its existing server secret key. A cached comparison can still be opened after the visitor reaches the generation limit.
+
+Apply [the comparison source card migration](../supabase/migrations/20261115084402_comparison_source_cards.sql) before deploying live public research. It stores the source links alongside the cached answer.
+
 From **Project Settings → API** copy the project URL and the **secret** key.
 
 ## 2. Render

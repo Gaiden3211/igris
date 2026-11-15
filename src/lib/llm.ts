@@ -4,14 +4,16 @@ import {env} from './env';
 type Msg = OpenAI.Chat.ChatCompletionMessageParam;
 type Chunk = OpenAI.Chat.ChatCompletionChunk;
 
-async function withFailover<T>(fn: (client: OpenAI) => Promise<T>): Promise<{value: T; slot: string}> {
+async function withFailover<T>(fn: (client: OpenAI) => Promise<T>, signal: AbortSignal): Promise<{value: T; slot: string}> {
   let lastError: unknown = new Error('LLM_NOT_CONFIGURED');
   for (const [slot, apiKey] of Object.entries(env.radiumKeys)) {
     if (!apiKey) continue;
+    signal.throwIfAborted();
     const client = new OpenAI({apiKey, baseURL: env.radiumBaseUrl, timeout: 60_000, maxRetries: 0});
     try {
       return {value: await fn(client), slot};
     } catch (err) {
+      if (signal.aborted || err instanceof OpenAI.APIUserAbortError) throw err;
       lastError = err;
       console.error(`[llm] ${slot} request failed`, err instanceof OpenAI.APIError ? err.status : undefined);
     }
@@ -19,20 +21,27 @@ async function withFailover<T>(fn: (client: OpenAI) => Promise<T>): Promise<{val
   throw lastError;
 }
 
-export async function complete(messages: Msg[], maxTokens: number) {
+export async function complete(messages: Msg[], maxTokens: number, signal?: AbortSignal) {
+  const requestSignal = modelSignal(signal);
   const {value, slot} = await withFailover(async client => {
     const response = await client.chat.completions.create({
       model: env.radiumModel, messages, max_tokens: maxTokens + env.limits.reasoningTokens, temperature: 0,
-    });
+      reasoning_effort: env.radiumReasoningEffort,
+    }, {signal: requestSignal});
     if (!response.choices[0]?.message?.content?.trim()) throw new Error('model returned no visible text');
     return response;
-  });
+  }, requestSignal);
   return {
     text: value.choices[0]?.message?.content ?? '',
     slot,
     tokensIn: value.usage?.prompt_tokens ?? 0,
     tokensOut: value.usage?.completion_tokens ?? 0,
   };
+}
+
+// SDK timeouts alone do not bound the full lifetime of a streaming response.
+function modelSignal(signal?: AbortSignal) {
+  return AbortSignal.any([...(signal ? [signal] : []), AbortSignal.timeout(env.limits.modelTimeoutMs)]);
 }
 
 // Wait for visible content before committing to a provider stream. Retain only
@@ -70,17 +79,19 @@ async function openAnswer(response: AsyncIterable<Chunk>): Promise<AsyncIterable
   }
 }
 
-export async function stream(messages: Msg[], maxTokens: number) {
+export async function stream(messages: Msg[], maxTokens: number, signal?: AbortSignal) {
+  const requestSignal = modelSignal(signal);
   const {value, slot} = await withFailover(async client => {
     const response = await client.chat.completions.create({
       model: env.radiumModel,
       messages,
       max_tokens: maxTokens + env.limits.reasoningTokens,
       temperature: 0.2,
+      reasoning_effort: env.radiumReasoningEffort,
       stream: true,
       stream_options: {include_usage: true},
-    });
+    }, {signal: requestSignal});
     return openAnswer(response);
-  });
+  }, requestSignal);
   return {iterator: value, slot};
 }

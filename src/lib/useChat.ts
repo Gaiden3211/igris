@@ -1,108 +1,44 @@
 'use client';
 
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useAuiState, useLocalRuntime, type AssistantRuntime} from '@assistant-ui/react';
 import {useSettings} from '@/app/providers';
-import {DEFAULT_DAILY_LIMIT} from './quota';
-import type {Dict} from './i18n';
-import {readNdjson, type SourceCardData} from './citations';
+import {createChatAdapter, fromRuntimeMessage, toRuntimeMessage, type ChatMsg, type ChatOptions, type ChatRepository} from './chatAdapter';
+import {restoreRepository} from './chatRepository';
 
-// One conversation with /api/chat, shared by the Assistant page and the follow-up box on the Compare page.
-
-export interface ChatStep {
-  id: 'plan' | 'search' | 'answer';
-  status: 'running' | 'complete';
-  detail?: string;
-}
-export interface ChatMsg {
-  role: 'user' | 'assistant';
-  content: string;
-  steps: ChatStep[];
-  cards: SourceCardData[];
-  error?: string;
-}
-export type HistoryItem = {role: 'user' | 'assistant'; content: string};
-
-export const limitText = (t: Dict, code?: string) => (code === 'minute' ? t.limitMinute : code === 'global' ? t.limitGlobal : t.limitDay);
-
-export const userMsg = (content: string): ChatMsg => ({role: 'user', content, steps: [], cards: []});
-export const assistantMsg = (content: string, cards: SourceCardData[] = []): ChatMsg => ({role: 'assistant', content, steps: [], cards});
-
-const HISTORY_TURNS = 8; // the server accepts at most 8
-
-/**
- * @param focus  investigation ids the server always retrieves (a conversation about a comparison)
- * @param prefix earlier turns that are not shown in `messages` but belong to the conversation (the comparison itself)
- */
-export function useChat({focus, prefix = [], initialMessages, onQuestion}: {
-  focus?: string[] | null;
-  prefix?: HistoryItem[];
+export function useChatRuntime({initialMessages, onQuestion, ...options}: ChatOptions & {
   initialMessages?: ChatMsg[];
   onQuestion?: (messages: ChatMsg[]) => void;
-} = {}) {
+}) {
   const {t} = useSettings();
-  const [messages, setMessages] = useState<ChatMsg[]>(initialMessages ?? []);
-  const [busy, setBusy] = useState(false);
-  const [quota, setQuota] = useState<{left: number; perDay: number} | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const abort = useRef<AbortController | null>(null);
+  const [seed] = useState(() => initialMessages?.map(toRuntimeMessage));
+  return useLocalRuntime(createChatAdapter({...options, t, onQuestion}), {initialMessages: seed});
+}
 
-  useEffect(() => () => abort.current?.abort(), []);
+/** Read the mounted thread from inside its AssistantRuntimeProvider. */
+export function useChat(runtime: AssistantRuntime, repository?: ChatRepository) {
+  const [savedRepository] = useState(repository);
+  const [restored, setRestored] = useState(!savedRepository);
+  const loading = useAuiState(s => s.thread.isLoading);
+  const busy = useAuiState(s => s.thread.isRunning);
+  const turns = useAuiState(s => s.thread.messages);
+  const ready = !loading && restored;
 
-  const patchLast = (fn: (m: ChatMsg) => ChatMsg) => setMessages(list => list.map((m, i) => (i === list.length - 1 ? fn(m) : m)));
+  useEffect(() => {
+    if (loading || restored || !savedRepository) return;
+    runtime.thread.import(restoreRepository(savedRepository));
+    setRestored(true);
+  }, [loading, restored, runtime, savedRepository]);
 
-  const send = useCallback(
-    async (raw: string) => {
-      const message = raw.trim();
-      if (!message || abort.current) return;
-      setNotice(null);
-      setBusy(true);
-      const shown = messages.filter(m => m.content && !m.error).map(m => ({role: m.role, content: m.content}));
-      // Keep the prefix (the comparison) even in long threads: it is what the follow-ups are about.
-      const recent = shown.slice(-Math.max(HISTORY_TURNS - prefix.length, 2));
-      const history = [...prefix, ...recent].slice(-HISTORY_TURNS).map(h => ({role: h.role, content: h.content.slice(0, 6000)}));
-      const nextMessages = [...messages.filter(m => m.content || m.error), userMsg(message)];
-      onQuestion?.(nextMessages);
-      setMessages([...nextMessages, assistantMsg('')]);
-      const ctrl = new AbortController();
-      abort.current = ctrl;
-      try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: {'content-type': 'application/json'},
-          body: JSON.stringify({message, history, focus: focus && focus.length ? focus : undefined}),
-          signal: ctrl.signal,
-        });
-        if (!res.ok || !res.body) {
-          const body = await res.json().catch(() => ({}));
-          const text = res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel;
-          if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? DEFAULT_DAILY_LIMIT});
-          if (onQuestion) patchLast(m => ({...m, error: text}));
-          else {
-            setMessages(list => list.slice(0, -2));
-            setNotice(text);
-          }
-          return;
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await readNdjson(res.body, (ev: any) => {
-          if (ev.type === 'delta') patchLast(m => ({...m, content: m.content + ev.text}));
-          else if (ev.type === 'step')
-            patchLast(m => ({...m, steps: [...m.steps.filter(s => s.id !== ev.id), {id: ev.id, status: ev.status, detail: ev.detail}]}));
-          else if (ev.type === 'sources') patchLast(m => ({...m, cards: ev.cards}));
-          else if (ev.type === 'done') setQuota({left: ev.remainingToday, perDay: ev.perDay});
-          else if (ev.type === 'error') patchLast(m => ({...m, error: t.errModel}));
-        });
-      } catch (err) {
-        if ((err as Error)?.name !== 'AbortError') patchLast(m => ({...m, error: t.errModel}));
-      } finally {
-        setBusy(false);
-        abort.current = null;
-      }
-    },
-    [messages, focus, prefix, onQuestion, t],
-  );
-
-  const stop = () => abort.current?.abort();
-
-  return {messages, setMessages, busy, quota, setQuota, notice, send, stop};
+  const messages = useMemo(() => turns.map(fromRuntimeMessage), [turns]);
+  const send = useCallback((raw: string) => {
+    const text = raw.trim();
+    if (!ready || !text) return;
+    const thread = runtime.thread;
+    if (!thread.getState().isRunning) thread.append(text);
+  }, [ready, runtime]);
+  const stop = useCallback(() => {
+    if (ready && runtime.thread.getState().isRunning) runtime.thread.cancelRun();
+  }, [ready, runtime]);
+  return {ready, messages, busy, send, stop};
 }

@@ -1,5 +1,7 @@
 'use client';
 
+import {AssistantRuntimeProvider, type AssistantRuntime} from '@assistant-ui/react';
+
 import {useCallback, useEffect, Suspense, useMemo, useRef, useState} from 'react';
 import {Card} from '@astryxdesign/core/Card';
 import {Button} from '@astryxdesign/core/Button';
@@ -8,17 +10,20 @@ import {Heading, Text} from '@astryxdesign/core/Text';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Spinner} from '@astryxdesign/core/Spinner';
 import {Markdown} from '@astryxdesign/core/Markdown';
-import {ChatComposer, ChatToolCalls} from '@astryxdesign/core/Chat';
+import {ChatComposer} from '@astryxdesign/core/Chat';
 import {Table, pixel, proportional, type TableColumn} from '@astryxdesign/core/Table';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
-import {DEFAULT_DAILY_LIMIT} from '@/lib/quota';
 import {useSettings} from '@/app/providers';
-import {BackArrow} from '@/components/BackArrow';
+import {ConversationSlot} from '@/components/ConversationSessions';
+import {useConversationActivity} from '@/lib/conversationActivity';
 import {PageHeader} from '@/components/PageHeader';
 import {SourceCards} from '@/components/SourceCards';
+import {exportRepository} from '@/lib/chatRepository';
 import {ChatTurns} from '@/components/ChatTurns';
-import {assistantMsg, limitText, useChat, type ChatMsg, type HistoryItem} from '@/lib/useChat';
-import {linkCitations, readNdjson, type SourceCardData} from '@/lib/citations';
+import {MessageActions} from '@/components/MessageActions';
+import {useChat, useChatRuntime} from '@/lib/useChat';
+import {assistantMsg, chatEventSchema, limitText, type ChatMsg, type ChatStep, type HistoryItem} from '@/lib/chatAdapter';
+import {linkCitations, ndjsonEvents, type SourceCardData} from '@/lib/citations';
 import {comparisonIds, comparisonKey} from '@/lib/compare';
 import {useChatHistory, type Conversation} from '@/lib/chatHistory';
 import {useApi} from '@/lib/useApi';
@@ -34,11 +39,6 @@ interface Detail {
   publications: unknown[];
 }
 type Inv = NonNullable<Detail['investigation']> & {params: Detail['parameters']; pubs: number};
-interface Step {
-  id: 'search' | 'answer';
-  status: 'running' | 'complete';
-  detail?: string;
-}
 type FactRow = {key: string; label: string} & Record<string, unknown>;
 
 const years = (i: Inv) => {
@@ -64,13 +64,13 @@ function ComparisonRoute() {
   if (ids.length < 2) return (
     <div className="igris-page">
       <div className="igris-content">
-        <EmptyState title={t.compareTitle} description={t.compareNeedTwo} actions={<BackArrow href="/catalog" label={t.back} />} />
+        <EmptyState title={t.compareTitle} description={t.compareNeedTwo} />
       </div>
     </div>
   );
 
   const saved = conversations.find(chat => chat.id === id);
-  return <Comparison key={id} id={id} ids={saved?.comparison?.ids ?? ids} saved={saved} />;
+  return <ConversationSlot key={id} id={id}><Comparison id={id} ids={saved?.comparison?.ids ?? ids} saved={saved} /></ConversationSlot>;
 }
 
 function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; saved?: Conversation}) {
@@ -79,13 +79,13 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
   const {save} = useChatHistory();
   const [invs, setInvs] = useState<Inv[] | null>(null);
   const [factsError, setFactsError] = useState(false);
-  const [steps, setSteps] = useState<Step[]>([]);
+  const [steps, setSteps] = useState<ChatStep[]>([]);
   const [cards, setCards] = useState<SourceCardData[]>(saved?.comparison?.summary?.cards ?? []);
   const [answer, setAnswer] = useState(saved?.comparison?.summary?.content ?? '');
   const [summary, setSummary] = useState<ChatMsg | null>(saved?.comparison?.summary ?? null);
+  const [publicResearch, setPublicResearch] = useState(saved?.comparison?.publicResearch === true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [quota, setQuota] = useState<{left: number; perDay: number} | null>(null);
   const hasSaved = useRef(Boolean(saved));
   const request = useRef<AbortController | null>(null);
   const autoStarted = useRef(false);
@@ -107,75 +107,73 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
 
   useEffect(() => () => request.current?.abort(), []);
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (regenerate = false) => {
     if (request.current) return;
     const controller = new AbortController();
     request.current = controller;
     setBusy(true);
+    const names = ids.map(invId => invs?.find(inv => inv.id === invId)?.acronym ?? invId);
+    save({id, messages: [], focus: {ids, names}, comparison: {ids, names, summary, publicResearch}}, 'summary');
     setError(null);
     setSteps([]);
-    setCards([]);
-    setAnswer('');
+
     try {
       const res = await fetch('/api/compare', {
         method: 'POST',
         headers: {'content-type': 'application/json'},
-        body: JSON.stringify({ids, lang}),
-        signal: controller.signal,
+        body: JSON.stringify({ids, lang, regenerate}),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(70_000)]),
       });
       if (!res.ok || !res.body) {
         const body = await res.json().catch(() => ({}));
-        if (res.status === 429 && body.code !== 'minute') setQuota({left: 0, perDay: body.perDay ?? DEFAULT_DAILY_LIMIT});
-        setError(res.status === 429 ? limitText(t, body.code) : res.status === 503 ? t.errNotConfigured : t.errModel);
+        if (res.status === 429) setError(limitText(t, body.code));
+        else if (res.status === 409) setError(t.comparePending);
+        else if (res.status === 404) setError(t.errData);
+        else setError(body.error === 'not_configured' ? t.errNotConfigured : t.errModel);
         return;
       }
       let text = '';
       let sources: SourceCardData[] = [];
       let completed = false;
-      let failed = false;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await readNdjson(res.body, (ev: any) => {
+      let errorCode: string | undefined;
+      for await (const raw of ndjsonEvents(res.body)) {
+        const ev = chatEventSchema.parse(raw);
         if (ev.type === 'delta') {
           text += ev.text;
-          setAnswer(text);
+
+        } else if (ev.type === 'replace') {
+          text = ev.text;
+
         } else if (ev.type === 'step') {
           setSteps(s => [...s.filter(x => x.id !== ev.id), {id: ev.id, status: ev.status, detail: ev.detail}]);
         } else if (ev.type === 'sources') {
           sources = ev.cards;
-          setCards(sources);
+
         } else if (ev.type === 'done') {
           completed = true;
-          setQuota({left: ev.remainingToday, perDay: ev.perDay});
-        } else if (ev.type === 'error') failed = true;
-      });
-      if (completed && !failed && text.trim()) setSummary(assistantMsg(text, sources));
-      else setError(t.errModel);
+          break;
+        } else if (ev.type === 'error') {
+          errorCode = ev.code ?? 'model_unavailable';
+          break;
+        }
+      }
+      if (completed && !errorCode && text.trim()) {
+        setSummary(assistantMsg(text, sources));
+        setAnswer(text);
+        setCards(sources);
+        setPublicResearch(res.headers.get('x-comparison-public-research') === 'enabled');
+      }
+      else setError(errorCode === 'answer_unverified' ? t.errUnverified : errorCode === 'answer_incomplete' ? t.errIncomplete : t.errModel);
     } catch {
       if (!controller.signal.aborted) setError(t.errModel);
     } finally {
+      setSteps(steps => steps.map(s => s.status === 'running' ? {...s, status: 'error'} : s));
       request.current = null;
       if (!controller.signal.aborted) setBusy(false);
     }
-  }, [ids, lang, t]);
+  }, [id, ids, invs, lang, t, save, summary, publicResearch]);
 
-  const names = ids.map(invId => invs?.find(inv => inv.id === invId)?.acronym ?? invId);
-  const seedQuestion = t.compareSeedQuestion((saved?.comparison?.names ?? names).join(', '));
-  const prefix = useMemo<HistoryItem[]>(() => [
-    {role: 'user', content: seedQuestion},
-    ...(summary ? [{role: 'assistant' as const, content: summary.content}] : []),
-  ], [summary, seedQuestion]);
-  const changed = useRef(false);
-  const persist = (messages: ChatMsg[], update: 'messages' | 'summary') => {
-    const comparison = {ids, names: saved?.comparison?.names ?? names, summary};
-    save({id, messages, focus: {ids, names: comparison.names}, comparison}, update);
-  };
-  const followUp = useChat({
-    focus: ids, prefix, initialMessages: saved?.messages,
-    onQuestion: messages => {
-      changed.current = true;
-      persist(messages, 'messages');
-    },
-  });
+  const names = useMemo(() => saved?.comparison?.names ?? ids.map(invId => invs?.find(inv => inv.id === invId)?.acronym ?? invId), [saved?.comparison?.names, ids, invs]);
 
   useEffect(() => {
     if (!invs || factsError || hasSaved.current || autoStarted.current) return;
@@ -187,17 +185,20 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
   }, [invs, factsError, run]);
 
   useEffect(() => {
-    if (!invs || factsError || busy || followUp.busy || (!saved && !autoStarted.current)) return;
-    if (!saved || (summary && summary.content !== saved.comparison?.summary?.content) || changed.current) {
-      persist(followUp.messages, changed.current ? 'messages' : 'summary');
-      changed.current = false;
-    }
-  });
+    if (!invs || factsError || busy || (!saved && !autoStarted.current)) return;
+    if (saved && summary?.content === saved.comparison?.summary?.content
+      && publicResearch === (saved.comparison?.publicResearch === true)) return;
+    save({id, messages: [], focus: {ids, names}, comparison: {ids, names, summary, publicResearch}}, 'summary');
+  }, [invs, factsError, busy, saved, summary, publicResearch, save, id, ids, names]);
 
+  const viewed = useConversationActivity(id, busy, answer + (error ?? ''));
+
+  const activeStep = steps.findLast(step => step.status === 'running')?.id;
+  const progressLabel = activeStep === 'web' ? t.stepWeb : activeStep === 'verify' ? t.stepVerify : activeStep === 'answer' ? t.compareStepWrite : t.compareStepLoad;
   const list = invs ?? [];
   const cell = (fn: (i: Inv) => React.ReactNode) => Object.fromEntries(list.map(i => [i.id, fn(i)]));
   const paramIds = [...new Set(list.flatMap(i => i.params.map(p => p.parameter_id)))];
-  const facts: FactRow[] = [
+  const facts = ([
     {key: 'title', label: t.colName, ...cell(i => <Link href={`/investigations/${i.id}`}>{i.title}</Link>)},
     {key: 'topic', label: t.colTopic, ...cell(i => i.sub_research_area ?? '—')},
     {key: 'type', label: t.type, ...cell(i => i.project_type ?? '—')},
@@ -220,7 +221,7 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
       }),
     })),
     {key: 'source', label: t.viewSource, ...cell(i => <Link href={i.source_url}>PSI ↗</Link>)},
-  ];
+  ] as FactRow[]).filter(row => list.some(investigation => row[investigation.id] !== '—'));
   const columns: TableColumn<FactRow>[] = [
     {key: 'label', header: t.compareAttribute, width: pixel(150), renderCell: r => <Text weight="semibold">{r.label}</Text>},
     ...list.map(i => ({
@@ -235,10 +236,7 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <HStack gap={2} vAlign="center">
-            <BackArrow href="/catalog" label={t.back} />
-            <PageHeader title={t.compareTitle} />
-          </HStack>
+          <PageHeader title={t.compareTitle} />
 
           <Card>
             <VStack gap={3}>
@@ -259,24 +257,15 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
             <VStack gap={3}>
               <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
                 <Heading level={2}>{t.compareAi}</Heading>
-                {(followUp.quota ?? quota) && (
-                  <Text type="supporting" color="secondary">
-                    {t.remaining((followUp.quota ?? quota)!.left, (followUp.quota ?? quota)!.perDay)}
-                  </Text>
+                {summary && !publicResearch && !busy && !error && (
+                  <Button label={t.comparePublicSources} variant="secondary" size="sm" onClick={() => void run()} />
                 )}
               </HStack>
-              {steps.length > 0 && (
-                <ChatToolCalls
-                  label={t.stepsLabel}
-                  calls={steps.map(s => ({
-                    name: s.id === 'search' ? t.compareStepLoad : t.compareStepWrite,
-                    target: s.detail ?? '',
-                    status: s.status,
-                  }))}
-                />
-              )}
-              {busy && !answer && <HStack hAlign="center"><Spinner /></HStack>}
+              {busy && <Text type="supporting" color="secondary" role="status">
+                {progressLabel}
+              </Text>}
               {answer && <Markdown density="compact">{linkCitations(answer, cards)}</Markdown>}
+              {answer && !busy && <MessageActions text={answer} onRetry={() => void run(true)} />}
               {error && (
                 <HStack gap={3} vAlign="center" wrap="wrap">
                   <Text color="secondary">{error}</Text>
@@ -286,35 +275,85 @@ function Comparison({id, ids: requestedIds, saved}: {id: string; ids: string[]; 
               {saved && !summary && !busy && !error && (
                 <Button label={t.compareGenerate} size="sm" onClick={() => void run()} />
               )}
-              {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} />}
+              <div ref={viewed} />
+              {cards.length > 0 && !busy && <SourceCards cards={cards} title={t.sources} answer={answer} />}
             </VStack>
           </Card>
 
-          {invs && !factsError && !busy && (
-            <Card>
-              <VStack gap={3}>
-                <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-                  <Heading level={2}>{t.compareAskTitle}</Heading>
-                  <Button label={t.compareToChat} variant="ghost" size="sm" isDisabled={followUp.busy}
-                    href={`/?chat=${encodeURIComponent(id)}`} />
-                </HStack>
-                {followUp.messages.length > 0 && (
-                  <VStack gap={3}>
-                    <ChatTurns messages={followUp.messages} busy={followUp.busy} />
-                  </VStack>
-                )}
-                <ChatComposer
-                  onSubmit={followUp.send}
-                  onStop={followUp.stop}
-                  isStopShown={followUp.busy}
-                  placeholder={t.compareAskPlaceholder}
-                  status={followUp.notice ? {type: 'warning', message: followUp.notice} : undefined}
-                />
-              </VStack>
-            </Card>
+          {invs && !factsError && (
+            <ComparisonFollowUp id={id} ids={ids} names={names} summary={summary} saved={saved} visible={!busy} />
           )}
         </VStack>
       </div>
     </div>
+  );
+}
+
+interface ComparisonFollowUpProps {
+  id: string;
+  ids: string[];
+  names: string[];
+  summary: ChatMsg | null;
+  saved?: Conversation;
+  visible: boolean;
+}
+
+function ComparisonFollowUp(props: ComparisonFollowUpProps) {
+  const {t} = useSettings();
+  const prefix: HistoryItem[] = [{role: 'user', content: t.compareSeedQuestion(props.names.join(', '))}];
+  if (props.summary) prefix.push({role: 'assistant', content: props.summary.content});
+  const runtime = useChatRuntime({
+    surface: 'comparison',
+    focus: props.ids,
+    prefix,
+    contextCards: props.summary?.cards,
+    initialMessages: props.saved?.messages,
+  });
+  return <AssistantRuntimeProvider runtime={runtime}>
+    <ComparisonFollowUpContent {...props} runtime={runtime} />
+  </AssistantRuntimeProvider>;
+}
+
+function ComparisonFollowUpContent({id, ids, names, summary, saved, visible, runtime}: ComparisonFollowUpProps & {
+  runtime: AssistantRuntime;
+}) {
+  const {t} = useSettings();
+  const {save} = useChatHistory();
+  const followUp = useChat(runtime, saved?.repository);
+  const viewed = useConversationActivity(id, followUp.busy, followUp.messages.filter(m => m.role === 'assistant').map(m => m.content + (m.error ?? '')).join('\n'));
+  const lastSaved = useRef<typeof followUp.messages | null>(null);
+
+  useEffect(() => {
+    if (!followUp.ready || followUp.busy || !followUp.messages.length || lastSaved.current === followUp.messages) return;
+    lastSaved.current = followUp.messages;
+    save({
+      id,
+      messages: followUp.messages,
+      focus: {ids, names},
+      comparison: {ids, names, summary},
+      repository: exportRepository(runtime),
+    }, 'messages');
+  }, [followUp.ready, followUp.busy, followUp.messages, id, ids, names, summary, runtime, save]);
+
+  if (!visible) return null;
+  return (
+    <Card>
+      <VStack gap={3}>
+        <Heading level={2}>{t.compareAskTitle}</Heading>
+        {followUp.messages.length > 0 && (
+          <VStack gap={3}>
+            <ChatTurns />
+          </VStack>
+        )}
+        <div ref={viewed} />
+        <ChatComposer
+          isDisabled={!followUp.ready || followUp.busy}
+          onSubmit={followUp.send}
+          onStop={followUp.stop}
+          isStopShown={followUp.busy}
+          placeholder={t.compareAskPlaceholder}
+        />
+      </VStack>
+    </Card>
   );
 }

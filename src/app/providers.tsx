@@ -1,10 +1,11 @@
 'use client';
 
-import NextLink from 'next/link';
+import {AppLink} from '@/components/AppLink';
 import {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {Theme} from '@astryxdesign/core/theme';
 import {LinkProvider} from '@astryxdesign/core/Link';
 import {neutralTheme} from '@astryxdesign/theme-neutral/built';
+import {ConversationSessions} from '@/components/ConversationSessions';
 import {ChatHistoryProvider} from '@/lib/chatHistory';
 import {dictionaries, type Dict, type Lang} from '@/lib/i18n';
 
@@ -14,7 +15,7 @@ interface Settings {
   lang: Lang;
   welcomed: boolean;
 }
-const DEFAULTS: Settings = {mode: 'light', lang: 'en', welcomed: false};
+const DEFAULTS: Settings = {mode: 'dark', lang: 'en', welcomed: false};
 const KEY = 'igris-settings';
 
 interface Ctx extends Settings {
@@ -35,7 +36,7 @@ export function Providers({children}: {children: React.ReactNode}) {
       const saved = JSON.parse(localStorage.getItem(KEY) ?? 'null');
       if (saved && typeof saved === 'object') {
         setSettings({
-          mode: saved.mode === 'dark' || (saved.mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light',
+          mode: saved.mode === 'light' ? 'light' : 'dark',
           lang: saved.lang === 'uk' ? 'uk' : 'en',
           welcomed: saved.welcomed === true,
         });
@@ -65,7 +66,7 @@ export function Providers({children}: {children: React.ReactNode}) {
   return (
     <SettingsContext.Provider value={value}>
       <Theme theme={neutralTheme} mode={settings.mode}>
-        <LinkProvider component={NextLink}><ChatHistoryProvider>{children}</ChatHistoryProvider></LinkProvider>
+        <LinkProvider component={AppLink}><ChatHistoryProvider><ConversationSessions>{children}</ConversationSessions></ChatHistoryProvider></LinkProvider>
       </Theme>
     </SettingsContext.Provider>
   );
