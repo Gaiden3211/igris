@@ -8,9 +8,18 @@
     "start": "next start",
     "lint": "eslint",
     "ingest": "tsx scripts/ingest.ts",
-    "typecheck": "tsc --noEmit"
+    "refresh:references": "tsx scripts/refresh-references.ts",
+    "typecheck": "tsc --noEmit",
+    "check:references": "node --import tsx scripts/check-references.ts",
+    "audit:files": "node scripts/audit-psi-files.mjs",
+    "index:files": "node --import tsx scripts/index-psi-files.ts",
+    "check:files": "node --import tsx scripts/check-psi-files.ts",
+    "check:ingest": "node --import tsx scripts/check-ingest.ts",
+    "check:api": "node scripts/check-api.mjs",
+    "check:agent": "node --import tsx scripts/check-agent.ts"
   },
   "dependencies": {
+    "@assistant-ui/react": "0.15.36",
     "@astryxdesign/charts": "^0.7.16-canary.g48a3d9d",
     "@astryxdesign/core": "^0.7.16-canary.g48a3d9d",
     "@astryxdesign/theme-neutral": "^0.7.16-canary.g48a3d9d",
@@ -35,5 +44,10 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    }
   }
 }

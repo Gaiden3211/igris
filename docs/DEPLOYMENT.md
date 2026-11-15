@@ -2,17 +2,21 @@
 
 ## 1. Supabase
 
-The project `aeycforegdtnshjszpdg` (region eu-central-1) already has the schema applied. For a fresh project, run the files in `supabase/migrations/` in order in the SQL editor.
+Create a project in the organization that will own the deployment. For a fresh project, run the files in `supabase/migrations/` in filename order in the SQL editor. The local development database and any other existing Supabase project are separate targets; do not reuse their URL or keys for the new deployment.
+
+Before deploying the comparison API, apply [the comparison cache migration](../supabase/migrations/20261115075947_comparison_cache.sql) to the target Supabase database. The API reads and writes this cache via its existing server secret key. A cached comparison can still be opened after the visitor reaches the generation limit.
+
+Apply [the comparison source card migration](../supabase/migrations/20261115084402_comparison_source_cards.sql) before deploying live public research. It stores the source links alongside the cached answer.
 
 From **Project Settings → API** copy the project URL and the **secret** key.
 
 ## 2. Render
 
 1. New → Blueprint → pick this repository. Render reads [`render.yaml`](../render.yaml) (free plan, Frankfurt, health check `/api/health`).
-2. Fill in the variables it asks for: `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `RADIUM_API_KEY`, `RADIUM_API_KEY_BACKUP`.
-3. Deploy. Every push to the default branch redeploys.
+2. Select the `igris_v2` branch. Fill in `SUPABASE_URL`, `SUPABASE_SECRET_KEY` and `RADIUM_API_KEY`. A backup `RADIUM_API_KEY_BACKUP` is optional and can be added in the service environment later. The Blueprint selects `clarke-1.0`, enables public NASA research and keeps production limits enabled.
+3. Deploy. Pushes to the linked `igris_v2` branch trigger redeployment.
 
-Check `https://<your-app>.onrender.com/api/health`: `database` and `assistant` should both be `ok`.
+Check `https://<your-app>.onrender.com/api/health`: `database` and `assistant` should both be `ok`. The assistant flag confirms that a model key is configured; send a real chat question to verify the key and provider connection.
 
 ## 3. Keep the service awake
 
@@ -33,7 +37,13 @@ Or locally:
 SUPABASE_URL=... SUPABASE_SECRET_KEY=... npm run ingest
 ```
 
-The import takes a few minutes, is safe to re-run, and replaces each investigation's files, publications and passages.
+The import refreshes investigation inventories and metadata passages while retaining stable publication IDs and existing file excerpts. For the prepared file evidence, run the indexer after the catalog import:
+
+```bash
+node --env-file=.env.deploy.local --import tsx scripts/index-psi-files.ts
+```
+
+The ignored `.env.deploy.local` file must contain the new deployment project's `SUPABASE_URL` and `SUPABASE_SECRET_KEY`. Reimport fetches current public records; use a reviewed data export instead if an exact copy of the local research corpus is required.
 
 ## Environment variables
 

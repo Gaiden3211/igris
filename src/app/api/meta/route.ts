@@ -12,6 +12,7 @@ export async function GET() {
       db().from('sources').select('kind,title,url,publisher,license_note,used_for').order('sort_order'),
       db().from('investigations').select('fetched_at').order('fetched_at', {ascending: false}).limit(1),
     ]);
+    for (const result of [domains, parameters, scenarios, sources, lastFetch]) if (result.error) throw result.error;
     return {
       domains: domains.data ?? [],
       parameters: parameters.data ?? [],

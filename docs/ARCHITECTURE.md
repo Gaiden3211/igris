@@ -12,10 +12,10 @@ One Next.js service serves the pages and the API. The browser never talks to Sup
 
 ## Request flow: a question to the assistant
 
-1. `POST /api/chat` validates the body (zod), identifies the visitor (cookie id + hashed address) and checks quotas.
-2. **Plan**: a short model call turns the question into up to three English search queries and a language tag.
-3. **Retrieve**: Postgres full-text search over investigations and text passages; named accessions or acronyms are resolved directly. Matching records, their parameters and publication abstracts become a `SOURCES` block, each item with a citation id (`PSI-25`, `PUB-412`).
-4. **Answer**: the model streams an answer written only from `SOURCES`. The browser receives newline-delimited JSON events (`step`, `sources`, `delta`, `done`, `error`) and turns citation tags into links.
+1. `POST /api/chat` validates the body (zod), identifies the visitor (cookie id + hashed address) and checks quotas when `LIMITS_ENABLED` is true.
+2. **Route**: the model uses the question, recent history and previous source IDs to choose conversation, context reuse or new search.
+3. **Read evidence when needed**: context reuse re-reads known source IDs; new search resolves named investigations, performs scoped/strict-first full-text search and selects reviewed references and optional file excerpts.
+4. **Answer**: conversation and context replies stream model text. Ordinary research overviews stream grounded paragraphs; comparisons and detailed file/measurement drafts undergo semantic review, which may accept or correct them. Citation IDs and destinations are checked against authoritative source cards. The browser shows only the work actually performed, with copy, retry/regenerate and stop actions.
 5. The request is logged in `usage_events` (token counts, no message text).
 
 The model is not asked to call tools itself. The server runs the retrieval steps, so the flow works with any OpenAI-compatible chat model. See [AGENT.md](AGENT.md).
@@ -61,4 +61,11 @@ Functions `search_investigations` and `search_chunks` do ranked full-text search
 
 ## Interface
 
-Astryx `AppShell` + `SideNav` give the desktop layout; below the medium breakpoint the navigation moves into a drawer and the assistant fills the screen. Theme mode, language, glow color and research area are stored per browser in `localStorage`.
+`Shell` owns navigation and settings; on small screens navigation opens in a drawer. Astryx supplies chat presentation, menus, source disclosures and loading indicators; assistant-ui owns thread editing, branching and generation controls. Theme and language are stored per browser in `localStorage`.
+
+`ConversationSessions` retains runtime owners in stable portal containers at the application provider level. Route slots attach/detach these containers without remounting assistant-ui. Active requests continue during same-tab navigation; ten recent idle sessions are retained, and active sessions are never evicted. Closing or reloading the tab still ends client-owned requests: this is not a server job queue.
+
+Chat and comparison history, pinned state and unread response identities are validated and saved in browser storage. Running state is transient. A response becomes read when its end is visible on the active screen in a visible tab; hover and context-menu gestures never mark it read. Deleting a conversation disposes its runtime and blocks late writes from recreating it. Chat and comparison follow-ups send an explicit surface and selected investigation IDs to the shared agent pipeline.
+
+
+Sidebar titles are generated in the background for a conversation when it is opened or finishes a response. One bounded request through `/api/conversation-title` returns English and Ukrainian variants together. The browser validates and stores both variants with the conversation, preserving them across future messages and selecting the interface language without another model request. Older history receives titles when opened; unconfigured or failed metadata requests retain the local fallback. Title requests use the existing model quota and usage accounting and never delay an answer.

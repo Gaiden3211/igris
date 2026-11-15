@@ -59,13 +59,14 @@ const years = (r: InvestigationRow) => {
 };
 
 export default function CatalogPage() {
-  const {t, domain} = useSettings();
+  const {t} = useSettings();
   const [input, setInput] = useState('');
   const [q, setQ] = useState('');
   const [sub, setSub] = useState('');
   const [hardware, setHardware] = useState('');
   const [data, setData] = useState('');
   const [sort, setSort] = useState('');
+  const [filtersReady, setFiltersReady] = useState(false);
 
   // Deep links from Analytics and the assistant: /catalog?q=...&sub=...
   useEffect(() => {
@@ -75,16 +76,22 @@ export default function CatalogPage() {
     setSub(p.get('sub') ?? '');
     setHardware(p.get('hardware') ?? '');
     setData(p.get('data') ?? '');
+    setSort(p.get('sort') ?? '');
+    setFiltersReady(true);
   }, []);
 
-  const url = useMemo(() => {
-    const p = new URLSearchParams();
-    Object.entries({q, domain, sub, hardware, data, sort}).forEach(([k, v]) => v && p.set(k, v));
-    return `/api/investigations?${p}`;
-  }, [q, domain, sub, hardware, data, sort]);
+  const filters = useMemo(() => {
+    const params = new URLSearchParams();
+    Object.entries({q, sub, hardware, data, sort}).forEach(([key, value]) => { if (value) params.set(key, value); });
+    return params.toString();
+  }, [q, sub, hardware, data, sort]);
+  useEffect(() => {
+    if (filtersReady) window.history.replaceState(window.history.state, '', filters ? `/catalog?${filters}` : '/catalog');
+  }, [filtersReady, filters]);
+  const url = `/api/investigations?${filters}`;
   const res = useApi<CatalogResponse>(url);
 
-  // Selection for comparison: at most COMPARE_MAX rows; "select all" fills up to the cap in the current order.
+  // Selection for comparison: at most COMPARE_MAX rows.
   const rows = useMemo(() => res.data?.rows ?? [], [res.data]);
   const [selected, setSelected] = useCompareSelection();
   const [labels, setLabels] = useState<Record<string, string>>({});
@@ -101,15 +108,14 @@ export default function CatalogPage() {
   const selectionPlugin = useTableSelection<InvestigationRow>({
     ...selectionConfig,
     getRowLabel: r => r.acronym ?? r.title,
-    onSelectAll: ({isAllSelected}) =>
-      isAllSelected
-        ? setSelected(prev => {
-            const next = new Set(prev);
-            for (const r of rows) if (next.size < COMPARE_MAX) next.add(r.id);
-            return next;
-          })
-        : setSelected(new Set()),
   });
+  const rowSelection = {
+    ...selectionPlugin,
+    transformColumns(columns: TableColumn<InvestigationRow>[]) {
+      const [checkbox, ...rest] = selectionPlugin.transformColumns?.(columns) ?? columns;
+      return checkbox ? [{...checkbox, header: ''}, ...rest] : rest;
+    },
+  };
   const unselect = (id: string) =>
     setSelected(prev => {
       const next = new Set(prev);
@@ -117,13 +123,14 @@ export default function CatalogPage() {
       return next;
     });
 
-  const facetOptions = (items: Facet[] | undefined, label?: (v: string) => string) => [
-    {value: 'any', label: t.any},
+  const facetOptions = (items: Facet[] | undefined, anyLabel: string, label?: (v: string) => string) => [
+    {value: 'any', label: anyLabel},
     ...(items ?? []).map(f => ({value: f.value, label: `${label ? label(f.value) : f.value} (${f.count})`})),
   ];
   const dataLabel = (v: string) => (v === 'files' ? t.dataFiles : v === 'tables' ? t.dataTables : t.dataNone);
   const pick = (setter: (v: string) => void) => (v: string | null) => setter(!v || v === 'any' ? '' : v);
   const hasFilters = Boolean(q || sub || hardware || data);
+  const canReset = hasFilters || Boolean(sort);
 
   const columns: TableColumn<InvestigationRow>[] = [
     {key: 'id', header: t.colId, width: pixel(90)},
@@ -131,27 +138,23 @@ export default function CatalogPage() {
       key: 'title',
       header: t.colName,
       width: proportional(3, {minWidth: 260}),
-      renderCell: r => (
-        <VStack gap={0}>
-          <Link href={`/investigations/${r.id}`}>{r.acronym ?? r.title}</Link>
-          {r.acronym && <Text type="supporting" color="secondary">{r.title}</Text>}
-        </VStack>
-      ),
+      renderCell: r => <Link href={`/investigations/${r.id}`}>{r.acronym ?? r.title}</Link>,
     },
     {key: 'sub_research_area', header: t.colTopic, width: proportional(2, {minWidth: 160}), renderCell: r => r.sub_research_area ?? '—'},
     {key: 'start_date', header: t.colYears, width: pixel(110), renderCell: r => years(r)},
     {key: 'file_count', header: t.colFiles, width: pixel(90), align: 'end', renderCell: r => r.file_count.toLocaleString()},
     {key: 'publication_count', header: t.colPubs, width: pixel(90), align: 'end'},
+    {key: 'reference_count', header: t.catalogSources, width: pixel(90), align: 'end'},
   ];
 
   return (
     <div className="igris-page">
       <div className="igris-content">
         <VStack gap={5}>
-          <PageHeader title={t.catalogTitle} subtitle={t.catalogSubtitle} />
+          <PageHeader title={t.catalogTitle} />
 
           <HStack gap={2} vAlign="end">
-            <div style={{flex: 1}}>
+            <div style={{flex: 1, minWidth: 0}}>
               <TextInput
                 type="search"
                 label={t.search}
@@ -167,9 +170,9 @@ export default function CatalogPage() {
           </HStack>
 
           <div className="igris-filters">
-            <Selector label={t.filterSub} options={facetOptions(res.data?.facets.sub)} value={sub || 'any'} onChange={pick(setSub)} />
-            <Selector label={t.filterHardware} options={facetOptions(res.data?.facets.hardware)} value={hardware || 'any'} onChange={pick(setHardware)} />
-            <Selector label={t.filterData} options={facetOptions(res.data?.facets.data, dataLabel)} value={data || 'any'} onChange={pick(setData)} />
+            <Selector label={t.filterSub} options={facetOptions(res.data?.facets.sub, t.anyTopic)} value={sub || 'any'} onChange={pick(setSub)} />
+            <Selector label={t.filterHardware} options={facetOptions(res.data?.facets.hardware, t.anyHardware)} value={hardware || 'any'} onChange={pick(setHardware)} />
+            <Selector label={t.filterData} options={facetOptions(res.data?.facets.data, t.anyData, dataLabel)} value={data || 'any'} onChange={pick(setData)} />
             <Selector
               label={t.sort}
               options={[
@@ -177,19 +180,17 @@ export default function CatalogPage() {
                 {value: 'newest', label: t.sortNewest},
                 {value: 'oldest', label: t.sortOldest},
                 {value: 'files', label: t.sortFiles},
+                {value: 'tables', label: t.sortTables},
+                {value: 'name', label: t.sortName},
                 {value: 'publications', label: t.sortPublications},
               ]}
-              value={sort || res.data?.sort || 'newest'}
+              value={res.data?.sort ?? (q ? 'relevance' : 'newest')}
               onChange={v => setSort(v ?? '')}
             />
           </div>
 
-          <HStack hAlign="between" vAlign="center" wrap="wrap" gap={2}>
-            <Text color="secondary">
-              {res.data ? t.results(res.data.total) : ' '}
-              {res.data && res.data.total > 1 && selected.size === 0 ? ` · ${t.compareHint(COMPARE_MAX)}` : ''}
-            </Text>
-            {hasFilters && (
+          {canReset && (
+            <HStack hAlign="end">
               <Button
                 label={t.clearFilters}
                 variant="ghost"
@@ -200,10 +201,11 @@ export default function CatalogPage() {
                   setSub('');
                   setHardware('');
                   setData('');
+                  setSort('');
                 }}
               />
-            )}
-          </HStack>
+            </HStack>
+          )}
 
           {res.loading && !res.data ? (
             <HStack hAlign="center"><Spinner /></HStack>
@@ -216,15 +218,20 @@ export default function CatalogPage() {
               <EmptyState title={t.emptyDbTitle} description={t.emptyDbBody} />
             )
           ) : (
-            <Table<InvestigationRow>
-              data={rows}
-              columns={columns}
-              idKey="id"
-              density="balanced"
-              hasHover
-              verticalAlign="top"
-              plugins={{selection: selectionPlugin}}
-            />
+            <VStack gap={2}>
+              <div className="igris-table">
+                <Table<InvestigationRow>
+                  aria-label={t.catalogTitle}
+                  data={rows}
+                  columns={columns}
+                  idKey="id"
+                  density="balanced"
+                  hasHover
+                  verticalAlign="top"
+                  plugins={{selection: rowSelection}}
+                />
+              </div>
+            </VStack>
           )}
 
           {selected.size > 0 && (
@@ -235,7 +242,7 @@ export default function CatalogPage() {
                   <Token key={id} label={labels[id] ?? id} size="sm" onRemove={() => unselect(id)} />
                 ))}
               </HStack>
-              <HStack gap={2} vAlign="center">
+              <HStack className="igris-compare-actions" gap={2} vAlign="center" wrap="wrap">
                 <Button label={t.clearSelection} variant="ghost" size="sm" onClick={() => setSelected(new Set())} />
                 <Button
                   label={t.compare}

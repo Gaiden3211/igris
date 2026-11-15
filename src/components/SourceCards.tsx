@@ -1,30 +1,37 @@
-'use client';
-
-import {ClickableCard} from '@astryxdesign/core/ClickableCard';
-import {Badge} from '@astryxdesign/core/Badge';
+import {OriginalSourceLink} from './OriginalSourceLink';
+import {useSettings} from '@/app/providers';
+import {Collapsible} from '@astryxdesign/core/Collapsible';
+import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
-import {HStack, VStack} from '@astryxdesign/core/Layout';
-import {cardHref, type SourceCardData} from '@/lib/citations';
+import {Link} from '@astryxdesign/core/Link';
+import {cardHref, inspectAnswerCitations, type SourceCardData} from '@/lib/citations';
 
-/** Grid of cited records under an AI answer. */
-export function SourceCards({cards, title, note}: {cards: SourceCardData[]; title: string; note?: string}) {
+export function SourceCards({cards, title, answer}: {cards: SourceCardData[]; title: string; answer?: string}) {
+  const {t} = useSettings();
+  const citedIds = new Set(answer ? inspectAnswerCitations(answer, cards.map(card => card.id)).ids : []);
+  const cited = cards.filter(card => citedIds.has(card.id));
+  const extra = cards.filter(card => !citedIds.has(card.id));
+  const shown = cited.length ? cited : cards;
+  const row = (card: SourceCardData) => {
+    const href = cardHref(card);
+    return <ListItem key={card.id}
+      label={href ? <Link href={href}>{card.title}</Link> : <Text>{card.title}</Text>}
+      endContent={card.kind === 'investigation' && card.url ? <OriginalSourceLink url={card.url} iconOnly /> : undefined}
+    />;
+  };
   return (
-    <VStack gap={2}>
-      <Text type="label" weight="semibold">{title}</Text>
-      <div className="igris-grid-2">
-        {cards.map(c => (
-          <ClickableCard key={c.id} label={c.title} href={cardHref(c)} variant="muted" padding={3}>
-            <VStack gap={1}>
-              <HStack gap={2} vAlign="center">
-                <Badge label={c.id} variant={c.kind === 'investigation' ? 'neutral' : 'info'} />
-              </HStack>
-              <Text type="label" weight="semibold">{c.title}</Text>
-              {c.subtitle && <Text type="supporting" color="secondary">{c.subtitle}</Text>}
-            </VStack>
-          </ClickableCard>
-        ))}
-      </div>
-      {note && <Text type="supporting" color="secondary">{note}</Text>}
-    </VStack>
+    <SourceDisclosure label={`${cited.length ? t.citedSources : title} (${shown.length})`}>
+      <List density="compact">{shown.map(row)}</List>
+      {cited.length > 0 && extra.length > 0 && <SourceDisclosure label={`${t.otherSources} (${extra.length})`}>
+        <List density="compact">{extra.map(row)}</List>
+      </SourceDisclosure>}
+    </SourceDisclosure>
   );
+}
+
+function SourceDisclosure({label, children}: {label: string; children: React.ReactNode}) {
+  return <Collapsible className="igris-source-disclosure" chevronPosition="end"
+    trigger={<Text type="supporting" color="secondary">{label}</Text>} defaultIsOpen={false}>
+    {children}
+  </Collapsible>;
 }

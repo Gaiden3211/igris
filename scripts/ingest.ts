@@ -8,12 +8,16 @@
  * Needs SUPABASE_URL and SUPABASE_SECRET_KEY (not for --dry). Neither source needs a key.
  * Values are stored as published; nothing is estimated. The full source record is kept in investigations.raw.
  */
+import {mergePublications, publicationKey} from './lib/publications';
 import {createClient} from '@supabase/supabase-js';
+import {directReferencePublicationsForInvestigation, referenceChunksForInvestigation} from '../src/lib/agent/reference-index';
+import {challengeSourceLink, challengeSources} from '../src/lib/agent/challenge-sources';
 
 const PSI = 'https://psi.nasa.gov/geode-py/ws/repo';
 const PSI_PAGE = (id: string) => `https://psi.nasa.gov/physci/repo/data/investigations/${id}`;
 const NTRS = 'https://ntrs.nasa.gov/api/citations/search';
 const DRY = process.argv.includes('--dry');
+const REFERENCES_ONLY = process.argv.includes('--references-only');
 const WITH_NTRS = !process.argv.includes('--no-ntrs');
 
 type Json = Record<string, unknown>;
@@ -22,7 +26,10 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 async function getJson(url: string, tries = 3): Promise<Json> {
   for (let i = 1; ; i++) {
     try {
-      const res = await fetch(url, {headers: {accept: 'application/json', 'user-agent': 'igris-ingest (github.com/Gaiden3211/igris)'}});
+      const res = await fetch(url, {
+        headers: {accept: 'application/json', 'user-agent': 'igris-ingest (github.com/Gaiden3211/igris)'},
+        signal: AbortSignal.timeout(15000),
+      });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return (await res.json()) as Json;
     } catch (err) {
@@ -52,7 +59,8 @@ const str = (v: unknown): string | null => {
 };
 const arr = (v: unknown): Json[] => (Array.isArray(v) ? (v.filter(x => x && typeof x === 'object') as Json[]) : []);
 const num = (v: unknown): number | null => {
-  const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/,/g, ''));
+  if (v == null || (typeof v === 'string' && !v.trim()) || !['number', 'string'].includes(typeof v)) return null;
+  const n = Number(String(v).replace(/,/g, ''));
   return Number.isFinite(n) ? n : null;
 };
 // PSI has impossible dates such as 03-32-2023; those become null instead of failing the whole record.
@@ -250,7 +258,8 @@ function mapInvestigation(id: string, d: Json) {
 async function ntrsFor(id: string, acronym: string | null, area: string | null) {
   if (!acronym) return [];
   const q = encodeURIComponent(`"${acronym}" microgravity ${area ?? ''}`.trim());
-  const res = await getJson(`${NTRS}?q=${q}&page.size=5`).catch(() => ({results: []}) as Json);
+  const res = await getJson(`${NTRS}?q=${q}&page.size=5`);
+  if (!Array.isArray(res.results)) throw new Error('NTRS response does not contain a results array');
   return arr(res.results)
     .map(r => {
       const ntrsId = str(r.id);
@@ -279,11 +288,47 @@ const mentionsExactly = (text: string, acronym: string) => {
 };
 
 async function main() {
+  const supabase = DRY ? null : createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {auth: {persistSession: false}});
+  if (supabase) {
+    await supabase.from('sources').upsert(challengeSources.map((source, index) => ({
+      kind: 'reference',
+      title: source.title,
+      url: challengeSourceLink(source).url,
+      publisher: challengeSourceLink(source).publisher,
+      used_for: source.summary,
+      sort_order: 120 + index,
+    })), {onConflict: 'url'}).throwOnError();
+  }
+  if (REFERENCES_ONLY && supabase) {
+    const {data: investigations} = await supabase.from('investigations').select('id').limit(2000).throwOnError();
+    const {data: existing} = await supabase.from('chunks').select('id,investigation_id,section').like('section', 'reference:%').limit(2000).throwOnError();
+    const direct = (investigations ?? []).flatMap(inv => directReferencePublicationsForInvestigation(inv.id));
+    if (direct.length) {
+      const ids = [...new Set(direct.map(paper => paper.investigation_id))];
+      const {data: saved} = await supabase.from('publications').select('title,doi,url,abstract,year,authors').in('investigation_id', ids).throwOnError();
+      await supabase.from('publications').upsert(mergePublications(direct, saved ?? []), {onConflict: 'investigation_id,source,title'}).throwOnError();
+      const {data: papers} = await supabase.from('publications').select('investigation_id').in('investigation_id', ids).limit(10000).throwOnError();
+      for (const id of ids) await supabase.from('investigations').update({publication_count: papers?.filter(paper => paper.investigation_id === id).length ?? 0}).eq('id', id).throwOnError();
+    }
+    const wanted = (investigations ?? []).flatMap(inv => referenceChunksForInvestigation(inv.id));
+    for (const chunk of wanted) {
+      const old = existing?.find(item => item.investigation_id === chunk.investigation_id && item.section === chunk.section);
+      if (old) await supabase.from('chunks').update(chunk).eq('id', old.id).throwOnError();
+      else await supabase.from('chunks').insert(chunk).throwOnError();
+    }
+    const stale = (existing ?? []).filter(item => !wanted.some(chunk => chunk.investigation_id === item.investigation_id && chunk.section === item.section));
+    if (stale.length) await supabase.from('chunks').delete().in('id', stale.map(item => item.id)).throwOnError();
+    console.log(`Indexed ${wanted.length} reviewed source associations.`);
+  }
+  if (REFERENCES_ONLY) {
+    console.log(`${DRY ? 'Previewed' : 'Registered'} ${challengeSources.length} Flame in Freefall references.`);
+    return;
+  }
+
   const ids = await listInvestigationIds();
   console.log(`PSI investigations found: ${ids.length}`);
   if (ids.length === 0) throw new Error('The PSI search returned no investigations. The API shape may have changed; run with --dry and inspect.');
 
-  const supabase = DRY ? null : createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!, {auth: {persistSession: false}});
   let ok = 0;
   const failed: string[] = [];
 
@@ -291,10 +336,18 @@ async function main() {
     try {
       const detail = await getJson(`${PSI}/investigations/${id}`);
       const m = mapInvestigation(id, (detail._source as Json) ?? detail);
+      // A failed lookup skips the record before any write, preserving its existing papers.
       const ntrs = WITH_NTRS ? await ntrsFor(id, m.row.acronym, m.row.research_area) : [];
-      const publications = [...new Map([...m.publications, ...ntrs].map(p => [p.source + p.title, p])).values()];
+      // Preserve source abstracts verified during the link audit when PSI lists only a title.
+      const existing = supabase
+        ? (await supabase.from('publications').select('id,source,title,doi,url,abstract,year,authors').eq('investigation_id', id).throwOnError()).data ?? []
+        : [];
+      const publications = mergePublications(
+        [...m.publications, ...ntrs, ...directReferencePublicationsForInvestigation(id)], existing,
+      );
       m.row.publication_count = publications.length; // same number the Catalog shows and the detail page lists
       const chunks = [
+        ...referenceChunksForInvestigation(id),
         ...(['objective', 'hypothesis', 'approach', 'impacts', 'description'] as const)
           .filter(k => m.row[k])
           .map(k => ({investigation_id: id, section: k, content: m.row[k] as string, source_url: m.row.source_url})),
@@ -310,14 +363,17 @@ async function main() {
         };
         if (m.domain) await must(supabase.from('domains').upsert(m.domain, {onConflict: 'id', ignoreDuplicates: true}));
         await must(supabase.from('investigations').upsert(m.row));
-        // Child rows are replaced so a re-import never leaves stale data behind.
+        // Replace inventories and derived text; retain file evidence and stable publication IDs.
+        // Write retained/new papers first. A failed upsert must not erase the existing corpus.
+        if (publications.length) await must(supabase.from('publications').upsert(publications, {onConflict: 'investigation_id,source,title'}));
+        const retainedPapers = new Set(publications.map(publicationKey));
+        const stalePaperIds = existing.filter(paper => !retainedPapers.has(publicationKey(paper))).map(paper => paper.id);
         await must(supabase.from('files').delete().eq('investigation_id', id));
-        await must(supabase.from('chunks').delete().eq('investigation_id', id));
-        await must(supabase.from('publications').delete().eq('investigation_id', id));
+        await must(supabase.from('chunks').delete().eq('investigation_id', id).not('section', 'like', 'file:%'));
         const dedupe = <T,>(rows: T[], key: (r: T) => string) => [...new Map(rows.map(r => [key(r), r])).values()];
         if (m.files.length) await must(supabase.from('files').insert(dedupe(m.files, f => f.kind + f.file_name)));
-        if (publications.length) await must(supabase.from('publications').insert(dedupe(publications, p => p.source + p.title)));
         if (chunks.length) await must(supabase.from('chunks').insert(chunks));
+        if (stalePaperIds.length) await must(supabase.from('publications').delete().in('id', stalePaperIds));
       }
       ok++;
     } catch (err) {

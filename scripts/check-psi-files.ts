@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import passages from '../data/psi-file-passages.json';
+import manifest from '../src/lib/psi-file-status.json';
+import {linkCitations, type SourceCardData} from '../src/lib/citations';
+import {prioritizeStudyFiles} from '../src/lib/agent/rank';
+import {parseFileExcerpt} from '../src/lib/agent/file-evidence';
+import {psiFileStatus} from '../src/lib/psi-files';
+
+assert.equal(manifest.inventoryRows, 593);
+assert.equal(manifest.uniqueFiles, 591);
+const seen = new Set<string>();
+for (const passage of passages) {
+  const key = passage.investigation_id + '|' + passage.section;
+  assert(!seen.has(key), 'Duplicate file excerpt'); seen.add(key);
+  const content = parseFileExcerpt(passage.content);
+  assert(content);
+  assert(content.file_name && content.location && content.text);
+  const status = psiFileStatus(passage.investigation_id, content.file_name);
+  assert.equal(status.access_status, 'accessible');
+  assert.equal(status.source_url, passage.source_url);
+  assert(status.indexed_passages > 0);
+  const url = new URL(passage.source_url);
+  assert.equal(url.hostname, 'psi.nasa.gov');
+  assert(!url.searchParams.has('X-Amz-Signature'), 'Do not persist expiring signed links');
+}
+assert.equal(parseFileExcerpt('null'), null);
+assert.equal(parseFileExcerpt('{broken'), null);
+assert.equal(parseFileExcerpt(JSON.stringify({file_name: 'x.csv', text: '123', location: 7, checkedOn: '2026-11-14', coverage: 'excerpt'})), null);
+const bass = passages.find(row => row.investigation_id === 'PSI-25' && JSON.parse(row.content).text.includes('"B1"'));
+assert(bass);
+const excerpt = JSON.parse(bass.content);
+const headers = JSON.parse(excerpt.header) as string[];
+const line = excerpt.text.split('\n').find((row: string) => row.includes('"B1"')) as string;
+const row = JSON.parse(line.slice(line.indexOf(':') + 1)) as string[];
+assert.equal(headers[11].trim(), 'Calibrated  initial O2 % by vol');
+assert.equal(row[11], '22.2', 'Preserve the source initial oxygen value');
+assert.equal(headers[16], 'Final CO (ppm)');
+assert.equal(row[16], '6');
+assert.match(excerpt.location, /^CSV record 2/);
+const card: SourceCardData = {id: 'FILE-123', kind: 'data', title: excerpt.file_name, url: bass.source_url};
+assert(linkCitations('Value [FILE-123].', [card]).includes(`[FILE-123](<${bass.source_url}>)`));
+assert(!linkCitations('[FILE-999]', [card]).includes('https://'), 'Unknown file citations must not become links');
+const broad = Array.from({length: 6}, (_, index) => ({id: index + 1, investigation_id: 'PSI-102'}));
+const selected = [{id: 7, investigation_id: 'PSI-25'}, {id: 8, investigation_id: 'PSI-26'}];
+const prioritized = prioritizeStudyFiles([...broad, ...selected], ['PSI-25', 'PSI-26'], 6);
+assert.deepEqual(prioritized.slice(0, 2).map(row => row.investigation_id), ['PSI-25', 'PSI-26']);
+assert.equal(new Set(prioritized.map(row => row.id)).size, prioritized.length);
+console.log(`Verified ${passages.length} file excerpts, source locators, BASS-II cell alignment and FILE citation linking.`);

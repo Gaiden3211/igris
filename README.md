@@ -61,6 +61,8 @@ SUPABASE_URL=... SUPABASE_SECRET_KEY=... npm run ingest
 | `npm run build` / `npm start` | Production build and server |
 | `npm run typecheck` | TypeScript check |
 | `npm run lint` | ESLint |
+| `npm run check:agent` | Offline planner and citation boundary regression checks |
+| `npm run check:api` | Production API checks with isolated fixtures (build first) |
 | `npm run ingest` | Import PSI and NTRS data into Supabase (`-- --dry` to preview) |
 
 ## License

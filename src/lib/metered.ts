@@ -11,7 +11,6 @@ export const json = (status: number, body: unknown, headers: Record<string, stri
 
 export interface Metered {
   visitor: ReturnType<typeof getVisitor>;
-  limit: LimitState;
   cookie: Record<string, string>;
 }
 
@@ -27,9 +26,12 @@ export async function openMetered(req: NextRequest): Promise<Metered | Response>
     console.error('[metered] limit check failed', err);
     return json(503, {error: 'unavailable'}, cookie);
   }
-  if (!limit.ok) return json(429, {error: 'limit', code: limit.code, perDay: limit.perDay}, cookie);
-  return {visitor, limit, cookie};
+  if (!limit.ok) return json(429, {error: 'limit', code: limit.code}, cookie);
+  return {visitor, cookie};
 }
+
+export class UnverifiedAnswer extends Error {}
+export class IncompleteAnswer extends Error {}
 
 export type Send = (event: Record<string, unknown>) => void;
 export interface Usage {
@@ -43,18 +45,24 @@ export interface Usage {
  * Streams newline-delimited JSON events (`step`, `sources`, `delta`, `done`, `error`) and records usage at the end,
  * even when `run` fails midway, so retries cannot bypass the quota.
  */
-export function meteredStream(m: Metered, run: (send: Send, usage: Usage) => Promise<void>): Response {
+export function meteredStream(m: Metered, run: (send: Send, usage: Usage) => Promise<void>, headers: Record<string, string> = {}): Response {
   const encoder = new TextEncoder();
+  let cancelled = false;
   const body = new ReadableStream({
     async start(controller) {
-      const send: Send = event => controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+      const send: Send = event => {
+        if (!cancelled) controller.enqueue(encoder.encode(JSON.stringify(event) + '\n'));
+      };
       const usage: Usage = {tokensIn: 0, tokensOut: 0, slot: 'primary', answer: ''};
       try {
         await run(send, usage);
-        send({type: 'done', remainingToday: Math.max(0, m.limit.remainingToday - 1), perDay: m.limit.perDay});
+        send({type: 'done'});
       } catch (err) {
-        console.error('[metered] failed', err);
-        send({type: 'error', code: 'model_unavailable'});
+        if (!cancelled) {
+          if (!(err instanceof UnverifiedAnswer)) console.error('[metered] failed', err);
+          else console.warn('[agent] answer withheld', err.message || 'incomplete_generation');
+          send({type: 'error', code: err instanceof UnverifiedAnswer ? 'answer_unverified' : err instanceof IncompleteAnswer ? 'answer_incomplete' : 'model_unavailable'});
+        }
       } finally {
         if (usage.tokensOut === 0) usage.tokensOut = Math.ceil(usage.answer.length / 4);
         await recordUsage({
@@ -65,32 +73,38 @@ export function meteredStream(m: Metered, run: (send: Send, usage: Usage) => Pro
           tokensIn: usage.tokensIn,
           tokensOut: usage.tokensOut,
         }).catch(e => console.error('[metered] usage log failed', e));
-        controller.close();
+        if (!cancelled) controller.close();
       }
     },
+    cancel() { cancelled = true; },
   });
   return new Response(body, {
-    headers: {'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no', ...m.cookie},
+    headers: {'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no', ...m.cookie, ...headers},
   });
 }
 
-/** Pipes a model stream into `delta` events and accumulates usage. */
-export async function pipeAnswer(
-  iterator: AsyncIterable<{choices: {delta?: {content?: string | null}}[]; usage?: {prompt_tokens?: number; completion_tokens?: number} | null}>,
-  send: Send,
+/** Collects the model draft for verification while preserving streaming usage reports. */
+export async function collectAnswer(
+  iterator: AsyncIterable<{choices: {delta?: {content?: string | null}; finish_reason?: string | null}[]; usage?: {prompt_tokens?: number; completion_tokens?: number} | null}>,
   usage: Usage,
+  onDelta?: (text: string) => void,
 ) {
+  let finishReason: string | null = null;
   for await (const chunk of iterator) {
+    if (chunk.choices[0]?.finish_reason) finishReason = chunk.choices[0].finish_reason;
     const delta = chunk.choices[0]?.delta?.content;
     if (delta) {
       usage.answer += delta;
-      send({type: 'delta', text: delta});
+      onDelta?.(delta);
     }
     if (chunk.usage) {
       usage.tokensIn += chunk.usage.prompt_tokens ?? 0;
       usage.tokensOut += chunk.usage.completion_tokens ?? 0;
     }
   }
+  // A missing completion marker or interrupted generation is not a complete draft.
+  if (finishReason !== 'stop') throw new IncompleteAnswer();
   // A reasoning model can spend the whole token budget thinking and stream no visible text.
   if (!usage.answer.trim()) throw new Error('model returned no visible text');
+  return usage.answer;
 }
